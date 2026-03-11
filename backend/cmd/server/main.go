@@ -3,8 +3,10 @@ package main
 import (
 	"api-monitoring-saas/internal/database"
 	"api-monitoring-saas/internal/router"
-	"github.com/joho/godotenv"
+	"api-monitoring-saas/internal/worker"
 	"log"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -14,6 +16,9 @@ func main() {
 	}
 
 	database.ConnectDatabase()
+
+	go worker.StartScheduler()
+
 	r := router.SetupRouter()
 	log.Println("Server running on port 8080")
 
