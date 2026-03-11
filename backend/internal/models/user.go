@@ -6,5 +6,5 @@ type User struct {
 	ID        string `gorm:"type:uuid;primaryKey"`
 	Email     string `gorm:"uniqueIndex;not null"`
 	Password  string `gorm:"not null"`
-	createdAt time.Time
+	CreatedAt time.Time
 }

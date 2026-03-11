@@ -1,6 +1,7 @@
 package router
 
 import (
+	"api-monitoring-saas/internal/auth"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -8,9 +9,14 @@ import (
 
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
+	repo := auth.NewRepositry()
+	service := auth.NewService(repo)
+	handler := auth.NewHandler(service)
+
 	api := r.Group("/api")
 	{
-		api.GET("/health", healthCheck)
+		api.POST("/register", handler.Register)
+		api.POST("/login", handler.Login)
 	}
 
 	return r;
