@@ -1,6 +1,7 @@
 package router
 
 import (
+	"api-monitoring-saas/internal/analytics"
 	"api-monitoring-saas/internal/auth"
 	"api-monitoring-saas/internal/middleware"
 	"api-monitoring-saas/internal/monitor"
@@ -12,15 +13,17 @@ import (
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
-	authRepo := auth.NewRepositry()
+	authRepo := auth.NewRepository()
 	authService := auth.NewService(authRepo)
 	authHandler := auth.NewHandler(authService)
 
-	monitorRepo := monitor.NewRepositry();
+	monitorRepo := monitor.NewRepository()
 	monitorService := monitor.NewService(monitorRepo)
 	monitorHandler := monitor.NewHandler(monitorService)
 
-
+	analyticsRepo := analytics.NewRepository()
+	analyticsService := analytics.NewService(analyticsRepo)
+	analyticsHandler := analytics.NewHandler(analyticsService)
 
 	api := r.Group("/api")
 	{
@@ -36,7 +39,10 @@ func SetupRouter() *gin.Engine {
 		protected.DELETE("/monitors/:id", monitorHandler.DeleteMonitor)
 	}
 
-	return r;
+	protected.GET("/monitors/:id/results", analyticsHandler.GetResults)
+	protected.GET("/monitors/:id/uptime", analyticsHandler.GetUptime)
+
+	return r
 }
 
 func healthCheck(c *gin.Context) {

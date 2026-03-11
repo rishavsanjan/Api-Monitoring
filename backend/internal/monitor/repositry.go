@@ -5,17 +5,17 @@ import (
 	"api-monitoring-saas/internal/models"
 )
 
-type Repositry struct{}
+type Repository struct{}
 
-func NewRepositry() *Repositry {
-	return &Repositry{}
+func NewRepository() *Repository {
+	return &Repository{}
 }
 
-func (r *Repositry) CreateMonitor(monitor *models.Monitor) error {
+func (r *Repository) CreateMonitor(monitor *models.Monitor) error {
 	return  database.DB.Create(monitor).Error
 }
 
-func (r *Repositry) GetUserMonitor(userId string) ([]models.Monitor, error){
+func (r *Repository) GetUserMonitor(userId string) ([]models.Monitor, error){
 
 	var monitors []models.Monitor
 
@@ -23,6 +23,6 @@ func (r *Repositry) GetUserMonitor(userId string) ([]models.Monitor, error){
 	return  monitors, err
 }
 
-func (r *Repositry) DeleteMonitor(id string) error {
+func (r *Repository) DeleteMonitor(id string) error {
 	return database.DB.Delete(&models.Monitor{}, "id = ?", id).Error
 }

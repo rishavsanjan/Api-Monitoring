@@ -5,18 +5,18 @@ import (
 	"api-monitoring-saas/internal/models"
 )
 
-type Repositry struct{}
+type Repository struct{}
 
-func NewRepositry() *Repositry {
-	return &Repositry{}
+func NewRepository() *Repository {
+	return &Repository{}
 }
 
-func (r *Repositry) CreateUser(user *models.User) error {
+func (r *Repository) CreateUser(user *models.User) error {
 	return database.DB.Create(user).Error
 }
 
 
-func (r *Repositry) GetUserByEmail(email string) (*models.User, error){
+func (r *Repository) GetUserByEmail(email string) (*models.User, error){
 	var user models.User
 
 	err := database.DB.Where("email = ?", email).First(&user).Error
