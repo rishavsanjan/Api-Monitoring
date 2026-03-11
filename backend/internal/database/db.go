@@ -21,7 +21,7 @@ func ConnectDatabase() {
 	}
 
 	DB = db
-	migrate()
+	//migrate()
 	log.Println("Database connected")
 }
 
