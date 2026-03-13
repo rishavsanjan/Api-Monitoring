@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-
-
 func RunMonitoringCycle() {
 
 	var monitors []models.Monitor
@@ -31,33 +29,33 @@ func RunMonitoringCycle() {
 func checkMonitor(monitor models.Monitor) {
 	alertRepo := alert.NewRepository()
 	alertService := alert.NewService(alertRepo)
-	
+
 	start := time.Now()
 
 	response, err := http.Get(monitor.URL)
 
 	responseTime := time.Since(start).Milliseconds()
 
-	result := models.MonitorResult{
-		MonitorID:      monitor.ID,
-		ResponseTimeMs: int(responseTime),
-		CheckedAt:      time.Now(),
-	}
+	status := "DOWN"
+	statusCode := 0
+	if err == nil {
 
-	if err != nil {
-		result.Status = "DOWN"
-		result.StatusCode = 0
-		alertService.HandleFailure(monitor.ID)
-	} else {
-		result.StatusCode = response.StatusCode
+		statusCode = response.StatusCode
 
 		if response.StatusCode == monitor.ExpectedStatus {
-			result.Status = "UP"
-		} else {
-			result.Status = "DOWN"
+			status = "UP"
 		}
 
 		response.Body.Close()
+	}
+	alertService.HandleStatusChange(monitor.ID, status)
+
+	result := models.MonitorResult{
+		MonitorID:      monitor.ID,
+		Status:         status,
+		StatusCode:     statusCode,
+		ResponseTimeMs: int(responseTime),
+		CheckedAt:      time.Now(),
 	}
 
 	database.DB.Create(&result)
