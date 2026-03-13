@@ -1,12 +1,15 @@
 package worker
 
 import (
+	"api-monitoring-saas/internal/alert"
 	"api-monitoring-saas/internal/database"
 	"api-monitoring-saas/internal/models"
 	"log"
 	"net/http"
 	"time"
 )
+
+
 
 func RunMonitoringCycle() {
 
@@ -23,10 +26,12 @@ func RunMonitoringCycle() {
 		go checkMonitor(monitor)
 	}
 
-
 }
 
-func checkMonitor(monitor models.Monitor){
+func checkMonitor(monitor models.Monitor) {
+	alertRepo := alert.NewRepository()
+	alertService := alert.NewService(alertRepo)
+	
 	start := time.Now()
 
 	response, err := http.Get(monitor.URL)
@@ -34,20 +39,21 @@ func checkMonitor(monitor models.Monitor){
 	responseTime := time.Since(start).Milliseconds()
 
 	result := models.MonitorResult{
-		MonitorID: monitor.ID,
+		MonitorID:      monitor.ID,
 		ResponseTimeMs: int(responseTime),
-		CheckedAt: time.Now(),
+		CheckedAt:      time.Now(),
 	}
 
 	if err != nil {
 		result.Status = "DOWN"
 		result.StatusCode = 0
-	}else{
+		alertService.HandleFailure(monitor.ID)
+	} else {
 		result.StatusCode = response.StatusCode
 
 		if response.StatusCode == monitor.ExpectedStatus {
 			result.Status = "UP"
-		}else{
+		} else {
 			result.Status = "DOWN"
 		}
 
