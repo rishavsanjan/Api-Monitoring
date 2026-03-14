@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { useState } from "react";
 
 const IconPulse = ({ className = "w-7 h-7" }: { className?: string }) => (
@@ -45,12 +46,13 @@ const Navbar = () => {
 
         {/* CTA */}
         <div className="hidden sm:flex items-center gap-4">
-          <button className="text-slate-400 text-sm font-semibold hover:text-white transition-colors px-3 py-2">
+          <Link href={`/auth?tab=login`} className="text-slate-400 text-sm font-semibold hover:text-white transition-colors px-3 py-2">
             Log In
-          </button>
-          <button className="bg-blue-500 hover:bg-blue-400 text-white text-sm font-bold px-5 py-2.5 rounded-lg transition-all shadow-lg shadow-blue-500/20">
+          </Link>
+
+          <Link  className="bg-blue-500 hover:bg-blue-400 text-white text-sm font-bold px-5 py-2.5 rounded-lg transition-all shadow-lg shadow-blue-500/20" href={'/auth?tab=signup'}>
             Get Started
-          </button>
+          </Link>
         </div>
 
         {/* Mobile toggle */}
@@ -74,7 +76,7 @@ const Navbar = () => {
         </div>
       )}
     </header>
-  );  
+  );
 };
 
 export default Navbar
