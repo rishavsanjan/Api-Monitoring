@@ -57,7 +57,10 @@ func (h *Handler) Login(c *gin.Context){
 	token , err := h.service.Login(req.Email, req.Password);
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+			"success":false,
+		})
 		return
 	}
 

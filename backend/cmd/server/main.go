@@ -14,7 +14,7 @@ func main() {
 	if err != nil {
 		log.Println("No .env file found")
 	}
-
+	log.Print(err)
 	database.ConnectDatabase()
 
 	go worker.StartScheduler()
