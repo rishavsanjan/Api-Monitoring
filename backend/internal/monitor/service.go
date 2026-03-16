@@ -33,7 +33,7 @@ func (s *Service) CreateMonitor(userId string, name string, url string) error {
 	return  s.repo.CreateMonitor(&monitor)
 }
 
-func (s *Service) GetMonitors(userId string) ([]models.Monitor, error){
+func (s *Service) GetMonitors(userId string) ([]models.MonitorWithStatus, error){
 	return  s.repo.GetUserMonitor(userId)
 }
 
