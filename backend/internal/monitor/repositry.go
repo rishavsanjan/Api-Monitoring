@@ -3,6 +3,7 @@ package monitor
 import (
 	"api-monitoring-saas/internal/database"
 	"api-monitoring-saas/internal/models"
+	"fmt"
 )
 
 type Repository struct{}
@@ -25,10 +26,12 @@ func (r *Repository) GetUserMonitor(userId string) ([]models.MonitorWithStatus, 
 
 	for _, monitor := range monitors {
 		var log models.MonitorResult
-		database.DB.
-			Where("monitor_id = ?").
+		err := database.DB.
+			Where("monitor_id = ?", monitor.ID).
 			Order("checked_at desc").
-			First(&log)
+			First(&log).Error
+
+		fmt.Print(err)
 
 		result = append(result, models.MonitorWithStatus{
 			MonitorId:      monitor.ID,
@@ -36,10 +39,9 @@ func (r *Repository) GetUserMonitor(userId string) ([]models.MonitorWithStatus, 
 			URL:            monitor.URL,
 			Method:         monitor.Method,
 			ResponseTimeMs: log.ResponseTimeMs,
-			LastChecked:    log.CheckedAt,
+			LastChecked:    log.CheckedAt.String(),
 			ExpectedStatus: monitor.ExpectedStatus,
-			CurrentStatus: log.StatusCode,
-			
+			CurrentStatus:  log.StatusCode,
 		})
 
 	}
@@ -49,4 +51,80 @@ func (r *Repository) GetUserMonitor(userId string) ([]models.MonitorWithStatus, 
 
 func (r *Repository) DeleteMonitor(id string) error {
 	return database.DB.Delete(&models.Monitor{}, "id = ?", id).Error
+}
+
+func (r *Repository) GetDashboardStats(userId string) (models.DashboardStats, error) {
+	var stats models.DashboardStats
+
+	// 1. Total monitors
+	var total int64
+	err := database.DB.
+		Model(&models.Monitor{}).
+		Where("user_id = ?", userId).
+		Count(&total).Error
+	if err != nil {
+		return stats, err
+	}
+
+	stats.ActiveMonitors = total
+
+	// 2. Get latest result per monitor (JOIN + DISTINCT ON)
+	rows, err := database.DB.Raw(`
+	SELECT DISTINCT ON (m.id)
+		m.id,
+		m.expected_status,
+		r.status_code,
+		r.response_time_ms
+	FROM monitors m
+	LEFT JOIN monitor_results r ON m.id = r.monitor_id
+	WHERE m.user_id = ?::uuid
+	ORDER BY m.id, r.checked_at DESC
+`, userId).Rows()
+
+	if err != nil {
+		return stats, err
+	}
+	defer rows.Close()
+
+	var up, down int64
+	var totalResponse int64
+	var countResponse int64
+
+	for rows.Next() {
+		var monitorId string
+		var expected int
+		var statusCode *int
+		var responseTime *int64
+
+		err := rows.Scan(&monitorId, &expected, &statusCode, &responseTime)
+		if err != nil {
+			continue
+		}
+
+		// If no result exists → treat as DOWN
+		if statusCode == nil {
+			down++
+			continue
+		}
+
+		if *statusCode == expected {
+			up++
+		} else {
+			down++
+		}
+
+		if responseTime != nil {
+			totalResponse += *responseTime
+			countResponse++
+		}
+	}
+
+	stats.UpTime = up
+	stats.DownApi = down
+
+	if countResponse > 0 {
+		stats.AverageLatency = totalResponse / countResponse
+	}
+
+	return stats, nil
 }

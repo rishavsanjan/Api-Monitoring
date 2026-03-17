@@ -1,7 +1,6 @@
 package monitor
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -32,7 +31,7 @@ func (h *Handler) CreateMonitor(c *gin.Context) {
 
 	userId := c.GetString("user_id")
 
-	h.service.CreateMonitor( userId, req.Name, req.URL)
+	h.service.CreateMonitor(userId, req.Name, req.URL)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "monitor created",
@@ -50,15 +49,14 @@ func (h *Handler) GetMonitors(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"success":true,
-		"monitors":monitors,
+		"success":  true,
+		"monitors": monitors,
 	})
 }
 
 func (h *Handler) DeleteMonitor(c *gin.Context) {
 
 	id := c.Param("id")
-	fmt.Print(id)
 	err := h.service.DeleteMonitor(id)
 
 	if err != nil {
@@ -68,6 +66,22 @@ func (h *Handler) DeleteMonitor(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "monitor deleted",
+	})
+
+}
+
+func (h *Handler) GetDashboardStats(c *gin.Context) {
+	userID := c.GetString("user_id")
+	stats, err := h.service.GetDashboardStats(userID)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "unable to find stats"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":  true,
+		"stats": stats,
 	})
 
 }

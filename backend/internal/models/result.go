@@ -4,7 +4,7 @@ import "time"
 
 type MonitorResult struct {
 	ID             uint   `gorm:"primaryKey"`
-	MonitorID      string `gorm:"index"`
+	MonitorID      string    `gorm:"type:uuid;index"` // ✅ FIX
 	Status         string
 	StatusCode     int
 	ResponseTimeMs int

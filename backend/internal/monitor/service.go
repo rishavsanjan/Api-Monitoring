@@ -40,3 +40,7 @@ func (s *Service) GetMonitors(userId string) ([]models.MonitorWithStatus, error)
 func (s *Service) DeleteMonitor(id string)  error{
 	return  s.repo.DeleteMonitor(id)
 }
+
+func (s *Service) GetDashboardStats(userId string) (models.DashboardStats, error) {
+	return s.repo.GetDashboardStats(userId)
+}
