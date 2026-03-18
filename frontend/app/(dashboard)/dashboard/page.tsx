@@ -5,6 +5,7 @@ import { IconCheck, IconMenu, IconPlus, IconSearch, IconSensors, IconSpeed, Icon
 import { useQueries, useQuery } from "@tanstack/react-query";
 import api from "@/lib/axios";
 import { timeAgo } from "@/lib/date";
+import { AddMonitorModal } from "@/app/components/layout/AddReportModal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -49,7 +50,7 @@ const StatusBadge = ({ status }: { status: MonitorStatus }) => {
 
 interface StatCardProps {
     label: string;
-    value: string;
+    value: number | string;
     icon: React.ReactNode;
     iconColor: string;
     valueColor?: string;
@@ -70,46 +71,7 @@ const StatCard = ({ label, value, icon, iconColor, valueColor = "text-white" }: 
 // ─── Sidebar ───────────────────────────────────────────────────────────────
 // ─── Add Monitor Modal ────────────────────────────────────────────────────────
 
-const AddMonitorModal = ({ onClose }: { onClose: () => void }) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-        <div className="relative bg-slate-900 border border-slate-800 rounded-2xl p-8 w-full max-w-md shadow-2xl">
-            <h3 className="text-white text-lg font-bold mb-6">Add New Monitor</h3>
-            <div className="flex flex-col gap-4">
-                {[
-                    { label: "Monitor Name", placeholder: "e.g. Production API" },
-                    { label: "URL or Hostname", placeholder: "https://api.example.com" },
-                ].map((f) => (
-                    <div key={f.label} className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-slate-300">{f.label}</label>
-                        <input
-                            type="text"
-                            placeholder={f.placeholder}
-                            className="w-full bg-slate-950/60 border border-slate-800 rounded-lg px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
-                        />
-                    </div>
-                ))}
-                <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-medium text-slate-300">Check Interval</label>
-                    <select className="w-full bg-slate-950/60 border border-slate-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all">
-                        <option>Every 1 minute</option>
-                        <option>Every 5 minutes</option>
-                        <option>Every 10 minutes</option>
-                        <option>Every 30 minutes</option>
-                    </select>
-                </div>
-                <div className="flex gap-3 pt-2">
-                    <button onClick={onClose} className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-3 rounded-lg transition-colors text-sm">
-                        Cancel
-                    </button>
-                    <button className="flex-1 bg-blue-500 hover:bg-blue-400 text-white font-semibold py-3 rounded-lg transition-colors text-sm shadow-lg shadow-blue-500/20">
-                        Create Monitor
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-);
+
 
 // ─── Monitors Table ───────────────────────────────────────────────────────────
 
@@ -225,7 +187,7 @@ export default function MonitorsPage() {
     const queries = useQueries({
         queries: [
             {
-                queryKey: ['results', currentPage, activeTab],
+                queryKey: ['monitors', currentPage, activeTab],
 
                 queryFn: async () => {
                     const res = await api.get(`/api/monitors?tab=${activeTab}&page=${currentPage}&limit=${5}`);
@@ -254,8 +216,13 @@ export default function MonitorsPage() {
     const [monitorsQuery, statsQuery] = queries;
 
     const monitors: Monitor[] = monitorsQuery.data ?? [];
-    const statistics: Stats = statsQuery.data ?? [];
-    
+    const statistics: Stats = statsQuery.data ?? {
+        activeMonitors: 0,
+        uptime: 0,
+        averageLatency: 0,
+        incidents: 0
+    };
+
     if (!monitors || !statistics) {
         return;
     }
@@ -308,10 +275,10 @@ export default function MonitorsPage() {
                 <div className="flex-1 overflow-y-auto p-8 space-y-6">
                     {/* Stat cards */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                        <StatCard label="Active Monitors" value="24" icon={<IconSensors />} iconColor="text-blue-400" />
-                        <StatCard label="Uptime (24h)" value="99.98%" icon={<IconCheck />} iconColor="text-emerald-400" />
-                        <StatCard label="Average Latency" value="112ms" icon={<IconSpeed />} iconColor="text-amber-400" />
-                        <StatCard label="Ongoing Incidents" value="1" icon={<IconWarning />} iconColor="text-red-400" valueColor="text-red-400" />
+                        <StatCard label="Active Monitors" value={ statistics.activeMonitors} icon={<IconSensors />} iconColor="text-blue-400" />
+                        <StatCard label="Uptime (24h)" value={statistics.uptime} icon={<IconCheck />} iconColor="text-emerald-400" />
+                        <StatCard label="Average Latency" value={statistics.averageLatency} icon={<IconSpeed />} iconColor="text-amber-400" />
+                        <StatCard label="Ongoing Incidents" value={statistics.incidents} icon={<IconWarning />} iconColor="text-red-400" valueColor="text-red-400" />
                     </div>
 
                     {/* Table */}

@@ -17,8 +17,9 @@ func NewHandler(service *Service) *Handler {
 }
 
 type CreateMonitorRequest struct {
-	Name string `json:"name"`
-	URL  string `json:"URL"`
+	Name     string `json:"name"`
+	URL      string `json:"URL"`
+	Interval int    `json:"interval"`
 }
 
 func (h *Handler) CreateMonitor(c *gin.Context) {
@@ -80,8 +81,8 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"success":  true,
-		"stats": stats,
+		"success": true,
+		"stats":   stats,
 	})
 
 }

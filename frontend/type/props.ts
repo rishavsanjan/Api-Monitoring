@@ -17,3 +17,17 @@ export interface SignupForm {
     confirmPassword: string;
     agree: boolean;
 }
+
+export interface Monitor {
+    monitorId: string,
+    method: "GET" | "POST",
+    status: string,
+    name: string,
+    url: string,
+    responseTimeMs: number
+    lastCheckedAt: string
+    currentStatus: number,
+    expectedStatus: number
+
+}
+
