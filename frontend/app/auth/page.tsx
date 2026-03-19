@@ -7,18 +7,8 @@ import { IconPulse } from "../components/icons/icons";
 import SignupPage from "../components/layout/Signup";
 import Background from "../components/ui/BackGround";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 type AuthMode = "login" | "signup";
-
-
-
-// ─── Icons (inline SVG to avoid dependency) ───────────────────────────────────
-
-
-
-// ─── Background ───────────────────────────────────────────────────────────────
-
 
 
 export default function AuthPage() {

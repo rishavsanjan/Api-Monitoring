@@ -1,7 +1,8 @@
 import api from "@/lib/axios";
-import { Monitor } from "@/type/props";
+import { Monitor, Stats } from "@/type/props";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { ClipLoader } from "react-spinners";
 
 export const AddMonitorModal = ({ onClose }: { onClose: () => void }) => {
     const [form, setForm] = useState<{
@@ -46,6 +47,16 @@ export const AddMonitorModal = ({ onClose }: { onClose: () => void }) => {
             queryClient.setQueryData<Monitor[]>(['results'], (old) =>
                 old ? [...old, optimisticMonitor] : [optimisticMonitor]
             );
+
+            queryClient.setQueryData<Stats>(['stats'], (oldStats) => {
+                if (!oldStats) return { activeMonitors: 1, uptime: 0, averageLatency: 0, incidents: 0 };
+
+                return {
+                    ...oldStats,
+                    activeMonitors: oldStats.activeMonitors + 1,
+                };
+            });
+
 
             return { previousMonitors, previousStats }
         },
@@ -113,8 +124,16 @@ export const AddMonitorModal = ({ onClose }: { onClose: () => void }) => {
                             onClick={() => {
                                 addMonitorMutation.mutate()
                             }}
-                            className="flex-1 bg-blue-500 hover:bg-blue-400 text-white font-semibold py-3 rounded-lg transition-colors text-sm shadow-lg shadow-blue-500/20">
-                            Create Monitor
+                            disabled={addMonitorMutation.isPending || form.name.length < 3 || form.url.length < 5}
+                            className="disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex-1 bg-blue-500 hover:bg-blue-400 text-white font-semibold py-3 rounded-lg transition-colors text-sm shadow-lg shadow-blue-500/20">
+                            {
+                                addMonitorMutation.isPending ?
+                                    <ClipLoader />
+                                    :
+                                    'Create Monitor'
+
+                            }
+
                         </button>
                     </div>
                 </div>

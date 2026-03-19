@@ -1,13 +1,13 @@
 export function timeAgo(timestampStr: string): string {
   // Parse: "2026-03-17 13:20:04.64888 +0530 IST" -> ISO-like "2026-03-17T13:20:04.64888+05:30"
   const match = timestampStr.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2}\.\d+)\s+([+-]\d{4})\s+\w+$/);
-  if (!match) throw new Error('Invalid timestamp format');
+  if (!match) return ('Invalid Format');
   
   const [, datePart, timePart, offset] = match;
   const isoStr = `${datePart}T${timePart}${offset.slice(0, 3)}:${offset.slice(3)}`;
   const pastDate = new Date(isoStr);
   
-  if (isNaN(pastDate.getTime())) throw new Error('Failed to parse date');
+  if (isNaN(pastDate.getTime())) return ('Invalid Format');
   
   const now = Date.now();
   const diffMs = now - pastDate.getTime();

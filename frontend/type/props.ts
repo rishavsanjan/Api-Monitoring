@@ -31,3 +31,10 @@ export interface Monitor {
 
 }
 
+export interface Stats {
+    activeMonitors: number
+    uptime: number
+    averageLatency: number
+    incidents: number
+}
+
