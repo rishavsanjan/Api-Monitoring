@@ -12,7 +12,7 @@ func NewService(repo *Repository) *Service {
 	}
 }
 
-func (s *Service) GetResults(monitorID string) ([]models.MonitorResult, error) {
+func (s *Service) GetResults(monitorID string) ([]models.MonitorResult,float64, float64,int64,  error) {
 	return s.repo.GetMonitorResults(monitorID)
 }
 

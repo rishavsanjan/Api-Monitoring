@@ -33,3 +33,16 @@ export function timeAgo(timestampStr: string): string {
   const diffYear = Math.floor(diffMonth / 12);
   return `${diffYear} year${diffYear === 1 ? '' : 's'} ago`;
 }
+
+
+export function formatTimestamp(isoString: string): string {
+  const date = new Date(isoString);
+  
+  // Get date part like "Fri Mar 20 2026" and replace weekday with short month
+  const datePart = date.toDateString().replace(/^\w+\s/, date.toLocaleDateString('en-US', { month: 'short' }) + ' ');
+  
+  // Get time part like "21:04:51"
+  const timePart = date.toTimeString().split(' ')[0];
+  
+  return datePart + timePart;
+}

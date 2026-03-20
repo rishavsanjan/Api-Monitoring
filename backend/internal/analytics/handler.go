@@ -16,21 +16,26 @@ func NewHandler(service *Service) *Handler {
 	}
 }
 
-
-
-func (h *Handler) GetResults(c *gin.Context){
+func (h *Handler) GetResults(c *gin.Context) {
 
 	id := c.Param("id")
 
-	results, err := h.service.GetResults(id)
+	results, uptime, avgLatency, totalLogs, err := h.service.GetResults(id)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch results"})
 		return
 	}
 
-	c.JSON(http.StatusOK, results)
-	
+	c.JSON(http.StatusOK, gin.H{
+		"history": results,
+		"stats": gin.H{
+			"totalLogs":         totalLogs,
+			"uptime":            uptime,
+			"avgLatency": avgLatency,
+		},
+	})
+
 }
 
 func (h *Handler) GetUptime(c *gin.Context) {

@@ -1,5 +1,11 @@
 "use client";
 
+import { IconAnalytics, IconBell, IconChevronRight, IconDashboard, IconEdit, IconIncidents, IconMonitors, IconPlay, IconSearch, IconSettings, IconTrendDown, IconTrendUp, IconUser } from "@/app/components/icons/icons";
+import HistoryTable from "@/app/components/layout/HistoryTable";
+import api from "@/lib/axios";
+import { MonitorHistory } from "@/type/props";
+import { useQuery } from "@tanstack/react-query";
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -23,80 +29,14 @@ interface StatCardProps {
     deltaPositive: boolean | null;
 }
 
-// ─── SVG Icons ────────────────────────────────────────────────────────────────
-
-const IconAnalytics = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-    </svg>
-);
-const IconSearch = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
-        <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-    </svg>
-);
-const IconBell = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="w-5 h-5">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-    </svg>
-);
-const IconUser = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="w-5 h-5">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
-    </svg>
-);
-const IconDashboard = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="w-5 h-5">
-        <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
-    </svg>
-);
-const IconMonitors = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="w-5 h-5">
-        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-    </svg>
-);
-const IconIncidents = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="w-5 h-5">
-        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-        <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
-    </svg>
-);
-const IconSettings = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="w-5 h-5">
-        <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    </svg>
-);
-const IconChevronRight = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
-        <polyline points="9 18 15 12 9 6" />
-    </svg>
-);
-const IconTrendUp = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
-        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" />
-    </svg>
-);
-const IconTrendDown = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
-        <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" /><polyline points="17 18 23 18 23 12" />
-    </svg>
-);
-const IconPlay = () => (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-        <polygon points="5 3 19 12 5 21 5 3" />
-    </svg>
-);
-const IconEdit = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="w-4 h-4">
-        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
-);
-
-// ─── Data ─────────────────────────────────────────────────────────────────────
+interface Stats {
+    CheckedAt: string,
+    ID: number,
+    MonitorID: string,
+    ResponseTimeMs: number,
+    Status: "UP" | "DOWN",
+    StatusCode: number
+}
 
 const CHECK_HISTORY: CheckRecord[] = [
     { id: 1, status: "healthy", timestamp: "Oct 24, 2023  14:30:05", responseTime: "118ms", statusCode: "200 OK", location: "San Francisco, US" },
@@ -178,8 +118,8 @@ const ResponseChart = () => {
                             key={r}
                             onClick={() => setRange(r)}
                             className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${range === r
-                                    ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                                    : "text-slate-500 hover:text-slate-300 hover:bg-slate-800"
+                                ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                                : "text-slate-500 hover:text-slate-300 hover:bg-slate-800"
                                 }`}
                         >
                             {r}
@@ -225,84 +165,49 @@ const ResponseChart = () => {
 
 // ─── History Table ────────────────────────────────────────────────────────────
 
-const HistoryTable = () => (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-800">
-            <h3 className="font-bold text-white">Recent Check History</h3>
-        </div>
-        <div className="overflow-x-auto">
-            <table className="w-full text-left">
-                <thead className="bg-slate-800/50 border-b border-slate-800">
-                    <tr>
-                        {["Status", "Timestamp", "Response Time", "Status Code", "Location"].map((h) => (
-                            <th key={h} className="px-6 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
-                                {h}
-                            </th>
-                        ))}
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800">
-                    {CHECK_HISTORY.map((row) => (
-                        <tr key={row.id} className="hover:bg-slate-800/30 transition-colors">
-                            <td className="px-6 py-4"><StatusBadge status={row.status} /></td>
-                            <td className="px-6 py-4 text-sm font-medium text-slate-300 whitespace-nowrap">{row.timestamp}</td>
-                            <td className="px-6 py-4 text-sm text-slate-300 font-mono">{row.responseTime}</td>
-                            <td className="px-6 py-4">
-                                <span className={`font-mono text-sm ${row.status === "failed" ? "text-rose-400" : "text-emerald-400"}`}>
-                                    {row.statusCode}
-                                </span>
-                            </td>
-                            <td className="px-6 py-4 text-sm text-slate-500 whitespace-nowrap">{row.location}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-        <div className="px-6 py-4 border-t border-slate-800 text-center">
-            <button className="text-sm font-bold text-blue-400 hover:text-blue-300 hover:underline transition-colors">
-                View Full History →
-            </button>
-        </div>
-    </div>
-);
+// const HistoryTable = () => (
+//     <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+//         <div className="px-6 py-4 border-b border-slate-800">
+//             <h3 className="font-bold text-white">Recent Check History</h3>
+//         </div>
+//         <div className="overflow-x-auto">
+//             <table className="w-full text-left">
+//                 <thead className="bg-slate-800/50 border-b border-slate-800">
+//                     <tr>
+//                         {["Status", "Timestamp", "Response Time", "Status Code", "Location"].map((h) => (
+//                             <th key={h} className="px-6 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+//                                 {h}
+//                             </th>
+//                         ))}
+//                     </tr>
+//                 </thead>
+//                 <tbody className="divide-y divide-slate-800">
+//                     {CHECK_HISTORY.map((row) => (
+//                         <tr key={row.id} className="hover:bg-slate-800/30 transition-colors">
+//                             <td className="px-6 py-4"><StatusBadge status={row.status} /></td>
+//                             <td className="px-6 py-4 text-sm font-medium text-slate-300 whitespace-nowrap">{row.timestamp}</td>
+//                             <td className="px-6 py-4 text-sm text-slate-300 font-mono">{row.responseTime}</td>
+//                             <td className="px-6 py-4">
+//                                 <span className={`font-mono text-sm ${row.status === "failed" ? "text-rose-400" : "text-emerald-400"}`}>
+//                                     {row.statusCode}
+//                                 </span>
+//                             </td>
+//                             <td className="px-6 py-4 text-sm text-slate-500 whitespace-nowrap">{row.location}</td>
+//                         </tr>
+//                     ))}
+//                 </tbody>
+//             </table>
+//         </div>
+//         <div className="px-6 py-4 border-t border-slate-800 text-center">
+//             <button className="text-sm font-bold text-blue-400 hover:text-blue-300 hover:underline transition-colors">
+//                 View Full History →
+//             </button>
+//         </div>
+//     </div>
+// );
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
 
-type NavItem = { label: string; icon: React.ReactNode; active?: boolean };
 
-const NAV_ITEMS: NavItem[] = [
-    { label: "Dashboard", icon: <IconDashboard /> },
-    { label: "Monitors", icon: <IconMonitors />, active: true },
-    { label: "Incidents", icon: <IconIncidents /> },
-    { label: "Settings", icon: <IconSettings /> },
-];
-
-const Sidebar = () => (
-    <aside className="hidden lg:flex w-64 flex-shrink-0 flex-col border-r border-slate-800 bg-[#101722] p-4 gap-6">
-        <div className="flex items-center gap-3 px-2 py-1">
-            <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 flex-shrink-0">
-                <IconUser />
-            </div>
-            <div>
-                <p className="text-sm font-semibold text-white">DevOps Admin</p>
-                <p className="text-xs text-slate-500">Premium Plan</p>
-            </div>
-        </div>
-        <nav className="flex flex-col gap-1">
-            {NAV_ITEMS.map((item) => (
-                <a
-                    key={item.label}
-                    href="#"
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${item.active ? "bg-blue-500/10 text-blue-400" : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                        }`}
-                >
-                    {item.icon}
-                    <span className="text-sm font-medium">{item.label}</span>
-                </a>
-            ))}
-        </nav>
-    </aside>
-);
 
 // ─── Topbar ───────────────────────────────────────────────────────────────────
 
@@ -335,17 +240,36 @@ const Topbar = () => (
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MonitorDetailPage() {
+    const router = useRouter();
+    const params = useParams();
+    const id = params.id as string;
+
+    const { data } = useQuery({
+        queryKey: ['monitor-result', id],
+        queryFn: async () => {
+            const response = await api.get(`/api/monitors/${id}/results`)
+            console.log(response.data)
+            return response.data as {
+                history: MonitorHistory[],
+                stats: {
+                    totalLogs: number
+                    upTimeLogs: number
+                    totalResponseTime: number
+                }
+            }
+        }
+    })
     return (
         <div className="flex flex-col min-h-screen bg-[#101722] text-white">
             <Topbar />
             <div className="flex flex-1">
-                <Sidebar />
                 <main className="flex-1 overflow-y-auto bg-[#0d131e]">
-                    <div className="p-6 lg:px-10 max-w-5xl">
+                    <div className="p-6 lg:px-10 ">
 
                         {/* Breadcrumb */}
                         <nav className="flex items-center gap-1.5 text-sm text-slate-500 mb-5">
-                            <a href="#" className="hover:text-blue-400 transition-colors">Monitors</a>
+
+                            <button onClick={() => { router.push('/dashboard') }} className="hover:text-blue-400 transition-colors">Monitors</button>
                             <IconChevronRight />
                             <span className="text-white font-medium">User Auth API</span>
                         </nav>
@@ -392,7 +316,7 @@ export default function MonitorDetailPage() {
                         <ResponseChart />
 
                         {/* History */}
-                        <HistoryTable />
+                        <HistoryTable history={data?.history ?? []} />
                     </div>
                 </main>
             </div>

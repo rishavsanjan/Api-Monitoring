@@ -1,13 +1,13 @@
 export interface InputFieldProps {
-  id: string;
-  label: string;
-  type: string;
-  placeholder: string;
-  value: string;
-  onChange: (val: string) => void;
-  icon: React.ReactNode;
-  rightElement?: React.ReactNode;
-  error?: string;
+    id: string;
+    label: string;
+    type: string;
+    placeholder: string;
+    value: string;
+    onChange: (val: string) => void;
+    icon: React.ReactNode;
+    rightElement?: React.ReactNode;
+    error?: string;
 }
 
 export interface SignupForm {
@@ -36,5 +36,15 @@ export interface Stats {
     uptime: number
     averageLatency: number
     incidents: number
+}
+
+export interface MonitorHistory {
+    CheckedAt: string,
+    ID: number,
+    MonitorID: string,
+    ResponseTimeMs: number,
+    Status: "UP" | "DOWN",
+    StatusCode: number
+
 }
 

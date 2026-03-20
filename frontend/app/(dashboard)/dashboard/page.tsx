@@ -6,6 +6,7 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import api from "@/lib/axios";
 import { timeAgo } from "@/lib/date";
 import { AddMonitorModal } from "@/app/components/layout/AddReportModal";
+import { useRouter } from "next/navigation";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -67,16 +68,10 @@ const StatCard = ({ label, value, icon, iconColor, valueColor = "text-white" }: 
 );
 
 
-
-// ─── Sidebar ───────────────────────────────────────────────────────────────
-// ─── Add Monitor Modal ────────────────────────────────────────────────────────
-
-
-
 // ─── Monitors Table ───────────────────────────────────────────────────────────
 
 const MonitorsTable = ({ monitors, search }: { monitors: Monitor[]; search: string }) => {
-
+    const router = useRouter();
 
     return (
         <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
@@ -98,8 +93,11 @@ const MonitorsTable = ({ monitors, search }: { monitors: Monitor[]; search: stri
                     <tbody className="divide-y divide-slate-800">
                         {monitors.map((m) => (
                             <tr
+                                onClick={() => {
+                                    router.push(`/monitor/${m.monitorId}`)
+                                }}
                                 key={m.monitorId}
-                                className="hover:bg-slate-800/30 transition-colors group"
+                                className="cursor-pointer hover:bg-slate-800/30 transition-colors group"
                             >
                                 {/* Name */}
                                 <td className="px-6 py-4 whitespace-nowrap">
