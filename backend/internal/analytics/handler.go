@@ -20,7 +20,8 @@ func (h *Handler) GetResults(c *gin.Context) {
 
 	id := c.Param("id")
 
-	results, uptime, avgLatency, totalLogs, err := h.service.GetResults(id)
+	results, monitor, uptime, avgLatency, totalLogs, err := h.service.GetResults(id)
+	chartData := h.service.GetChart(id)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch results"})
@@ -28,10 +29,12 @@ func (h *Handler) GetResults(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
+		"chartData":chartData,
 		"history": results,
+		"monitor": monitor,
 		"stats": gin.H{
-			"totalLogs":         totalLogs,
-			"uptime":            uptime,
+			"totalLogs":  totalLogs,
+			"uptime":     uptime,
 			"avgLatency": avgLatency,
 		},
 	})

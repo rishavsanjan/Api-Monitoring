@@ -3,6 +3,7 @@ package analytics
 import (
 	"api-monitoring-saas/internal/database"
 	"api-monitoring-saas/internal/models"
+	"time"
 )
 
 type Repository struct{}
@@ -11,18 +12,22 @@ func NewRepository() *Repository {
 	return &Repository{}
 }
 
-func (r *Repository) GetMonitorResults(monitorId string) ([]models.MonitorResult, float64, float64, int64, error) {
+func (r *Repository) GetMonitorResults(monitorId string) ([]models.MonitorResult, models.Monitor, float64, float64, int64, error) {
 
 	var results []models.MonitorResult
+	var monitor models.Monitor
 
 	err := database.DB.
 		Where("monitor_id = ?", monitorId).
-		Order("checked_at desc").
 		Limit(5).
 		Find(&results).Error
 
+	database.DB.
+		Where("id = ?", monitorId).
+		Find(&monitor)
+
 	if err != nil {
-		return nil, 0, 0, 0, err
+		return nil, monitor, 0, 0, 0, err
 	}
 
 	var totalLogs int64
@@ -56,7 +61,47 @@ func (r *Repository) GetMonitorResults(monitorId string) ([]models.MonitorResult
 		avgLatency = float64(totalResponseTime) / float64(upTimeLogs)
 	}
 
-	return results, uptime, avgLatency, totalLogs, nil
+	return results, monitor, uptime, avgLatency, totalLogs, nil
+}
+
+type Result struct {
+	Minute      time.Time
+	AvgResponse float64
+}
+
+type ChartPoint struct {
+	Time  string  `json:"time"`
+	Value float64 `json:"value"`
+}
+
+func (r *Repository) GetChart(monitorId string) []ChartPoint {
+	var results []Result
+
+	database.DB.Raw(`
+	  SELECT *
+	  FROM (
+	    SELECT 
+	      DATE_TRUNC('minute', checked_at) AS minute,
+	      AVG(response_time_ms) AS avg_response
+	    FROM monitor_results
+	    WHERE monitor_id = ?
+	    GROUP BY minute
+	    ORDER BY minute DESC
+	    LIMIT 60
+	  ) sub
+	  ORDER BY minute ASC
+	`, monitorId).Scan(&results)
+
+	var formatted []ChartPoint
+
+	for _, r := range results {
+		formatted = append(formatted, ChartPoint{
+			Time:  r.Minute.Format("15:04"),
+			Value: r.AvgResponse,
+		})
+	}
+
+	return formatted
 }
 
 func (r *Repository) GetMonitorResultsCount(monitorId string) (int64, int64, error) {

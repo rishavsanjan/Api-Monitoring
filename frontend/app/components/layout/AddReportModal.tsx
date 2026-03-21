@@ -1,5 +1,5 @@
 import api from "@/lib/axios";
-import { Monitor, Stats } from "@/type/props";
+import {MonitorWithStatus, Stats } from "@/type/props";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ClipLoader } from "react-spinners";
@@ -32,7 +32,7 @@ export const AddMonitorModal = ({ onClose }: { onClose: () => void }) => {
             const previousMonitors = queryClient.getQueryData(['monitors']);
             const previousStats = queryClient.getQueryData(['stats']);
 
-            const optimisticMonitor: Monitor = {
+            const optimisticMonitor: MonitorWithStatus = {
                 monitorId: 'temp-' + Date.now(),
                 name: form.name,
                 url: form.url,
@@ -44,7 +44,7 @@ export const AddMonitorModal = ({ onClose }: { onClose: () => void }) => {
                 status: ''
             }
 
-            queryClient.setQueryData<Monitor[]>(['results'], (old) =>
+            queryClient.setQueryData<MonitorWithStatus[]>(['results'], (old) =>
                 old ? [...old, optimisticMonitor] : [optimisticMonitor]
             );
 

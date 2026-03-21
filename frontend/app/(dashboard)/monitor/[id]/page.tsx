@@ -2,8 +2,9 @@
 
 import { IconAnalytics, IconBell, IconChevronRight, IconDashboard, IconEdit, IconIncidents, IconMonitors, IconPlay, IconSearch, IconSettings, IconTrendDown, IconTrendUp, IconUser } from "@/app/components/icons/icons";
 import HistoryTable from "@/app/components/layout/HistoryTable";
+import PerformanceChart from "@/charts/PerformanceChart";
 import api from "@/lib/axios";
-import { MonitorHistory } from "@/type/props";
+import { Monitor, MonitorHistory } from "@/type/props";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -163,52 +164,6 @@ const ResponseChart = () => {
     );
 };
 
-// ─── History Table ────────────────────────────────────────────────────────────
-
-// const HistoryTable = () => (
-//     <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-//         <div className="px-6 py-4 border-b border-slate-800">
-//             <h3 className="font-bold text-white">Recent Check History</h3>
-//         </div>
-//         <div className="overflow-x-auto">
-//             <table className="w-full text-left">
-//                 <thead className="bg-slate-800/50 border-b border-slate-800">
-//                     <tr>
-//                         {["Status", "Timestamp", "Response Time", "Status Code", "Location"].map((h) => (
-//                             <th key={h} className="px-6 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
-//                                 {h}
-//                             </th>
-//                         ))}
-//                     </tr>
-//                 </thead>
-//                 <tbody className="divide-y divide-slate-800">
-//                     {CHECK_HISTORY.map((row) => (
-//                         <tr key={row.id} className="hover:bg-slate-800/30 transition-colors">
-//                             <td className="px-6 py-4"><StatusBadge status={row.status} /></td>
-//                             <td className="px-6 py-4 text-sm font-medium text-slate-300 whitespace-nowrap">{row.timestamp}</td>
-//                             <td className="px-6 py-4 text-sm text-slate-300 font-mono">{row.responseTime}</td>
-//                             <td className="px-6 py-4">
-//                                 <span className={`font-mono text-sm ${row.status === "failed" ? "text-rose-400" : "text-emerald-400"}`}>
-//                                     {row.statusCode}
-//                                 </span>
-//                             </td>
-//                             <td className="px-6 py-4 text-sm text-slate-500 whitespace-nowrap">{row.location}</td>
-//                         </tr>
-//                     ))}
-//                 </tbody>
-//             </table>
-//         </div>
-//         <div className="px-6 py-4 border-t border-slate-800 text-center">
-//             <button className="text-sm font-bold text-blue-400 hover:text-blue-300 hover:underline transition-colors">
-//                 View Full History →
-//             </button>
-//         </div>
-//     </div>
-// );
-
-
-
-
 // ─── Topbar ───────────────────────────────────────────────────────────────────
 
 const Topbar = () => (
@@ -251,14 +206,20 @@ export default function MonitorDetailPage() {
             console.log(response.data)
             return response.data as {
                 history: MonitorHistory[],
+                monitor: Monitor,
                 stats: {
                     totalLogs: number
-                    upTimeLogs: number
-                    totalResponseTime: number
+                    uptime: number
+                    avgLatency: number
                 }
             }
         }
     })
+
+    if (!data) {
+        return;
+    }
+
     return (
         <div className="flex flex-col min-h-screen bg-[#101722] text-white">
             <Topbar />
@@ -271,14 +232,14 @@ export default function MonitorDetailPage() {
 
                             <button onClick={() => { router.push('/dashboard') }} className="hover:text-blue-400 transition-colors">Monitors</button>
                             <IconChevronRight />
-                            <span className="text-white font-medium">User Auth API</span>
+                            <span className="text-white font-medium">{data?.monitor.Name}</span>
                         </nav>
 
                         {/* Header */}
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
                             <div>
                                 <h1 className="text-3xl lg:text-4xl font-black tracking-tight text-white mb-3">
-                                    User Auth API
+                                    {data?.monitor.Name}
                                 </h1>
                                 <div className="flex items-center gap-2.5">
                                     <span className="relative flex h-2.5 w-2.5">
@@ -288,7 +249,7 @@ export default function MonitorDetailPage() {
                                     <span className="text-slate-400 text-sm font-medium">
                                         Endpoint:{" "}
                                         <code className="bg-slate-800 border border-slate-700 px-2 py-0.5 rounded text-blue-400 font-mono text-xs">
-                                            /v1/auth/login
+                                            {data?.monitor.URL}
                                         </code>
                                     </span>
                                 </div>
@@ -307,10 +268,12 @@ export default function MonitorDetailPage() {
 
                         {/* Stat cards */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
-                            <StatCard label="Uptime (24h)" value="99.9%" delta="+0.05%" deltaPositive={true} />
-                            <StatCard label="Avg. Latency" value="124ms" delta="+12ms" deltaPositive={false} />
-                            <StatCard label="Total Checks" value="1,440" delta="Scheduled" deltaPositive={null} />
+                            <StatCard label="Uptime (24h)" value={`${String(data!.stats.uptime.toFixed(1))}%`} delta="+0.05%" deltaPositive={true} />
+                            <StatCard label="Avg. Latency" value={`${String(data.stats.avgLatency.toFixed(0))} ms`} delta="+12ms" deltaPositive={false} />
+                            <StatCard label="Total Checks" value={`${String(data.stats.totalLogs)}`} delta="Scheduled" deltaPositive={null} />
                         </div>
+
+                        <PerformanceChart />
 
                         {/* Chart */}
                         <ResponseChart />

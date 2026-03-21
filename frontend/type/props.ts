@@ -18,7 +18,7 @@ export interface SignupForm {
     agree: boolean;
 }
 
-export interface Monitor {
+export interface MonitorWithStatus {
     monitorId: string,
     method: "GET" | "POST",
     status: string,
@@ -46,5 +46,16 @@ export interface MonitorHistory {
     Status: "UP" | "DOWN",
     StatusCode: number
 
+}
+
+export interface Monitor {
+    ID:string
+    UserId:string
+    Name:string
+    URL:string
+    Method : "GET"
+    ExpectedStatus : 200
+    Interval : number
+    CreatedAt : string
 }
 
