@@ -5,8 +5,10 @@ import (
 	"api-monitoring-saas/internal/auth"
 	"api-monitoring-saas/internal/middleware"
 	"api-monitoring-saas/internal/monitor"
+	"api-monitoring-saas/internal/ws"
 	"net/http"
 	"time"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -53,6 +55,7 @@ func SetupRouter() *gin.Engine {
 	protected.GET("/monitors/:id/results", analyticsHandler.GetResults)
 	protected.GET("/monitors/:id/uptime", analyticsHandler.GetUptime)
 
+	r.GET("/ws", ws.HandleWS)
 	return r
 }
 

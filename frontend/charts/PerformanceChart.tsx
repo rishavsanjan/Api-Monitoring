@@ -10,14 +10,27 @@ import {
     AreaChart
 } from "recharts";
 
-const data = [
-    { time: "12:00", value: 150 },
-    { time: "12:01", value: 140 },
-    { time: "12:02", value: 160 },
-    { time: "12:03", value: 130 },
-];
 
-export default function ResponseTimeChart() {
+
+interface Props {
+    data: {
+        time: string,
+        value: number
+    }[]
+}
+
+
+
+export default function ResponseTimeChart({ data }: Props) {
+    const token = localStorage.getItem("api");
+
+    const socket = new WebSocket(
+        `ws://localhost:8080/ws?token=${token}`
+    );
+    socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.log("Live update:", data);
+    };
     return (
         <div className="bg-[#0B1220] text-white p-5 rounded-2xl shadow-lg w-full">
 
@@ -49,12 +62,12 @@ export default function ResponseTimeChart() {
                         <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
 
                         {/* Axes */}
-                       <XAxis
-  dataKey="time"
-  tickFormatter={(value, index) => {
-    return index % 5 === 0 ? value : ""; // show every 5 mins
-  }}
-/>
+                        <XAxis
+                            dataKey="time"
+                            tickFormatter={(value, index) => {
+                                return index % 5 === 0 ? value : ""; // show every 5 mins
+                            }}
+                        />
                         <YAxis
                             stroke="#6b7280"
                             tick={{ fontSize: 12 }}

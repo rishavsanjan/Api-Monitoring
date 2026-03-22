@@ -4,6 +4,8 @@ import (
 	"api-monitoring-saas/internal/alert"
 	"api-monitoring-saas/internal/database"
 	"api-monitoring-saas/internal/models"
+	"api-monitoring-saas/internal/ws"
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -59,4 +61,8 @@ func checkMonitor(monitor models.Monitor) {
 	}
 
 	database.DB.Create(&result)
+
+	msg, _ := json.Marshal(result)	
+	ws.SendToUser(monitor.UserId, msg)
+
 }
