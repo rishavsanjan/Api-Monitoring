@@ -20,6 +20,7 @@ func (r *Repository) GetMonitorResults(monitorId string) ([]models.MonitorResult
 	err := database.DB.
 		Where("monitor_id = ?", monitorId).
 		Limit(5).
+		Order("checked_at desc").
 		Find(&results).Error
 
 	database.DB.

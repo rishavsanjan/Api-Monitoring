@@ -49,13 +49,28 @@ export interface MonitorHistory {
 }
 
 export interface Monitor {
-    ID:string
-    UserId:string
-    Name:string
-    URL:string
-    Method : "GET"
-    ExpectedStatus : 200
-    Interval : number
-    CreatedAt : string
+    ID: string
+    UserId: string
+    Name: string
+    URL: string
+    Method: "GET"
+    ExpectedStatus: 200
+    Interval: number
+    CreatedAt: string
 }
+
+export interface MonitorPageResponse {
+    history: MonitorHistory[],
+    monitor: Monitor,
+    chartData: {
+        time: string,
+        value: number
+    }[],
+    stats: {
+        totalLogs: number
+        uptime: number
+        avgLatency: number
+    }
+}
+
 

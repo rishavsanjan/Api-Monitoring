@@ -1,3 +1,6 @@
+import { MonitorHistory, MonitorPageResponse } from "@/type/props";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import {
     LineChart,
     Line,
@@ -16,21 +19,72 @@ interface Props {
     data: {
         time: string,
         value: number
-    }[]
+    }[],
+    monitorId: string
+}
+
+
+function getTimeFromISO(isoString: string): string {
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) {
+        throw new Error('Invalid ISO timestamp');
+    }
+    return date.toTimeString().slice(0, 5);  // "HH:MM"
 }
 
 
 
-export default function ResponseTimeChart({ data }: Props) {
-    const token = localStorage.getItem("api");
+export default function ResponseTimeChart({ data, monitorId }: Props) {
+    const queryClient = useQueryClient();
 
-    const socket = new WebSocket(
-        `ws://localhost:8080/ws?token=${token}`
-    );
-    socket.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        console.log("Live update:", data);
-    };
+    useEffect(() => {
+        const token = localStorage.getItem("api");
+
+        const socket = new WebSocket(
+            `ws://localhost:8080/ws?token=${token}`
+        );
+
+        socket.onmessage = async (event) => {
+            const data: MonitorHistory = JSON.parse(event.data);
+            console.log("Live update:", data);
+            const newPoint = {
+                time: getTimeFromISO(data.CheckedAt),
+                value: data.ResponseTimeMs
+            };
+
+            await queryClient.cancelQueries({ queryKey: ["monitor-result", monitorId] });
+
+
+
+            queryClient.setQueryData<MonitorPageResponse>(
+                ["monitor-result", monitorId],
+                (old) => {
+                    if (!old) return old;
+                    if (old.monitor.ID != data.MonitorID) {
+                        return old;
+                    }
+
+                    return {
+                        ...old,
+                        history:[data, ...old.history],
+                        stats: {
+                            ...old.stats,
+                            totalLogs: old.stats.totalLogs += 1
+                        },
+                        chartData: [...old.chartData, newPoint]
+                    };
+                }
+            );
+
+
+        };
+
+        return () => {
+            socket.close(); 
+        };
+    }, []);
+
+
     return (
         <div className="bg-[#0B1220] text-white p-5 rounded-2xl shadow-lg w-full">
 

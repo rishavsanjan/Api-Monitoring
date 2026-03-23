@@ -4,7 +4,7 @@ import { IconAnalytics, IconBell, IconChevronRight, IconDashboard, IconEdit, Ico
 import HistoryTable from "@/app/components/layout/HistoryTable";
 import PerformanceChart from "@/charts/PerformanceChart";
 import api from "@/lib/axios";
-import { Monitor, MonitorHistory } from "@/type/props";
+import { Monitor, MonitorHistory, MonitorPageResponse } from "@/type/props";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 
@@ -67,6 +67,7 @@ const Topbar = () => (
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+
 export default function MonitorDetailPage() {
     const router = useRouter();
     const params = useParams();
@@ -77,19 +78,7 @@ export default function MonitorDetailPage() {
         queryFn: async () => {
             const response = await api.get(`/api/monitors/${id}/results`)
             console.log(response.data)
-            return response.data as {
-                history: MonitorHistory[],
-                monitor: Monitor,
-                chartData: {
-                    time: string,
-                    value: number
-                }[],
-                stats: {
-                    totalLogs: number
-                    uptime: number
-                    avgLatency: number
-                }
-            }
+            return response.data as MonitorPageResponse
         }
     })
 
@@ -150,7 +139,7 @@ export default function MonitorDetailPage() {
                             <StatCard label="Total Checks" value={`${String(data.stats.totalLogs)}`} delta="Scheduled" deltaPositive={null} />
                         </div>
 
-                        <PerformanceChart data={data.chartData} />
+                        <PerformanceChart data={data.chartData} monitorId={data.monitor.ID}/>
 
 
                         {/* History */}

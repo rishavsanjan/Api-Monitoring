@@ -1,16 +1,18 @@
-
 package ws
 
-import "github.com/gorilla/websocket"
+import (
+	"log"
+
+	"github.com/gorilla/websocket"
+)
 
 type Hub struct {
-	Clients map[string]map[*websocket.Conn]bool 
+	Clients map[string]map[*websocket.Conn]bool
 }
 
 var H = Hub{
 	Clients: make(map[string]map[*websocket.Conn]bool),
 }
-
 
 func SendToUser(userID string, message []byte) {
 
@@ -18,7 +20,7 @@ func SendToUser(userID string, message []byte) {
 	if !ok {
 		return
 	}
-
+	log.Println("Sending update to user:", userID)
 	for conn := range clients {
 		err := conn.WriteMessage(websocket.TextMessage, message)
 		if err != nil {
