@@ -35,14 +35,21 @@ export function timeAgo(timestampStr: string): string {
 }
 
 
-export function formatTimestamp(isoString: string): string {
-  const date = new Date(isoString);
-  
-  // Get date part like "Fri Mar 20 2026" and replace weekday with short month
-  const datePart = date.toDateString().replace(/^\w+\s/, date.toLocaleDateString('en-US', { month: 'short' }) + ' ');
-  
-  // Get time part like "21:04:51"
-  const timePart = date.toTimeString().split(' ')[0];
-  
-  return datePart + timePart;
+export function formatTimestamp(input: string): string {
+   const date = new Date(input);
+
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  const month = months[date.getMonth()];
+  const day = date.getDate();
+  const year = date.getFullYear();
+
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+
+  return `${month} ${day} ${year} ${hours}:${minutes}:${seconds}`;
 }

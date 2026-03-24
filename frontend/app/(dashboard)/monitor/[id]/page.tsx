@@ -1,12 +1,16 @@
 "use client";
 
 import { IconAnalytics, IconBell, IconChevronRight, IconDashboard, IconEdit, IconIncidents, IconMonitors, IconPlay, IconSearch, IconSettings, IconTrendDown, IconTrendUp, IconUser } from "@/app/components/icons/icons";
+import { AddMonitorModal } from "@/app/components/layout/AddReportModal";
+import { EditMonitorModal } from "@/app/components/layout/EditReportModal";
 import HistoryTable from "@/app/components/layout/HistoryTable";
 import PerformanceChart from "@/charts/PerformanceChart";
 import api from "@/lib/axios";
 import { Monitor, MonitorHistory, MonitorPageResponse } from "@/type/props";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -68,7 +72,16 @@ const Topbar = () => (
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 
+function getTimeFromISO(isoString: string): string {
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) {
+        throw new Error('Invalid ISO timestamp');
+    }
+    return date.toTimeString().slice(0, 5);
+}
+
 export default function MonitorDetailPage() {
+    const [showModal, setShowModal] = useState(false);
     const router = useRouter();
     const params = useParams();
     const id = params.id as string;
@@ -81,6 +94,62 @@ export default function MonitorDetailPage() {
             return response.data as MonitorPageResponse
         }
     })
+
+
+
+    const queryClient = useQueryClient();
+
+    useEffect(() => {
+        const token = localStorage.getItem("api");
+
+        const socket = new WebSocket(
+            `ws://localhost:8080/ws?token=${token}`
+        );
+
+        socket.onmessage = async (event) => {
+            const data: MonitorHistory = JSON.parse(event.data);
+            console.log("Live update:", data);
+            const newPoint = {
+                time: getTimeFromISO(data.CheckedAt),
+                value: data.ResponseTimeMs
+            };
+
+            await queryClient.cancelQueries({ queryKey: ["monitor-result", id] });
+
+
+
+            queryClient.setQueryData<MonitorPageResponse>(
+                ["monitor-result", id],
+                (old) => {
+                    if (!old) return old;
+                    if (old.monitor.ID != data.MonitorID) {
+                        return old;
+                    }
+                    toast.success(`Response recieved : ${data.ResponseTimeMs}ms`)
+
+                    return {
+                        ...old,
+                        history: [data, ...old.history],
+                        stats: {
+                            ...old.stats,
+                            totalLogs: old.stats.totalLogs += 1
+                        },
+                        chartData: [...old.chartData, newPoint]
+                    };
+                }
+            );
+
+
+
+
+        };
+
+        return () => {
+            socket.close();
+        };
+    }, []);
+
+
 
     if (!data) {
         return;
@@ -121,7 +190,11 @@ export default function MonitorDetailPage() {
                                 </div>
                             </div>
                             <div className="flex gap-2 flex-shrink-0">
-                                <button className="flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-white rounded-lg text-sm font-semibold transition-colors">
+                                <button
+                                    onClick={() => {
+                                        setShowModal(true)
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-white rounded-lg text-sm font-semibold transition-colors">
                                     <IconEdit />
                                     Edit Monitor
                                 </button>
@@ -139,11 +212,16 @@ export default function MonitorDetailPage() {
                             <StatCard label="Total Checks" value={`${String(data.stats.totalLogs)}`} delta="Scheduled" deltaPositive={null} />
                         </div>
 
-                        <PerformanceChart data={data.chartData} monitorId={data.monitor.ID}/>
+                        <PerformanceChart data={data.chartData} monitorId={data.monitor.ID} />
 
 
                         {/* History */}
                         <HistoryTable history={data?.history ?? []} />
+                        {showModal && <EditMonitorModal
+                            name={data.monitor.Name}
+                            url={data.monitor.URL}
+                            interval={data.monitor.Interval}
+                            onClose={() => setShowModal(false)} />}
                     </div>
                 </main>
             </div>

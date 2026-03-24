@@ -22,6 +22,12 @@ type CreateMonitorRequest struct {
 	Interval int    `json:"interval"`
 }
 
+type UpdateMonitorInput struct {
+	Name     *string `json:"name"`
+	URL      *string `json:"url"`
+	Interval *int    `json:"interval"`
+}
+
 func (h *Handler) CreateMonitor(c *gin.Context) {
 	var req CreateMonitorRequest
 

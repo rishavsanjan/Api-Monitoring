@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { IconCheck, IconMenu, IconPlus, IconSearch, IconSensors, IconSpeed, IconWarning } from "../../components/icons/icons";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQueries } from "@tanstack/react-query";
 import api from "@/lib/axios";
 import { timeAgo } from "@/lib/date";
 import { AddMonitorModal } from "@/app/components/layout/AddReportModal";

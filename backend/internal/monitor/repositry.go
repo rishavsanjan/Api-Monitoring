@@ -53,6 +53,30 @@ func (r *Repository) DeleteMonitor(id string) error {
 	return database.DB.Delete(&models.Monitor{}, "id = ?", id).Error
 }
 
+func (r *Repository) UpdateMonitor(id string, input UpdateMonitorInput) error {
+	updates := make(map[string]interface{})
+
+	if input.Name != nil {
+		updates["name"] = *input.Name
+	}
+	if input.URL != nil {
+		updates["url"] = *input.URL
+	}
+	if input.Interval != nil {
+		updates["interval"] = *input.Interval
+	}
+
+	if len(updates) == 0 {
+		return nil
+	}
+
+	return database.DB.
+		Model(&models.Monitor{}).
+		Where("id = ?", id).
+		Updates(updates).Error
+
+}
+
 func (r *Repository) GetDashboardStats(userId string) (models.DashboardStats, error) {
 	var stats models.DashboardStats
 
