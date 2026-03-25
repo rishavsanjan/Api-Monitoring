@@ -17,28 +17,32 @@ func NewService(repo *Repository) *Service {
 	}
 }
 
+func (s *Service) UpdateMonitor(id string, input UpdateMonitorInput) error {
+	return s.repo.UpdateMonitor(id, input)
+}
+
 func (s *Service) CreateMonitor(userId string, name string, url string) error {
 
 	monitor := models.Monitor{
-		ID: uuid.New().String(),
-		UserId: userId,
-		Name: name,
-		URL: url,
-		Method: "GET",
+		ID:             uuid.New().String(),
+		UserId:         userId,
+		Name:           name,
+		URL:            url,
+		Method:         "GET",
 		ExpectedStatus: 200,
-		Interval: 60,
-		CreatedAt: time.Now(),
+		Interval:       60,
+		CreatedAt:      time.Now(),
 	}
 
-	return  s.repo.CreateMonitor(&monitor)
+	return s.repo.CreateMonitor(&monitor)
 }
 
-func (s *Service) GetMonitors(userId string) ([]models.MonitorWithStatus, error){
-	return  s.repo.GetUserMonitor(userId)
+func (s *Service) GetMonitors(userId string) ([]models.MonitorWithStatus, error) {
+	return s.repo.GetUserMonitor(userId)
 }
 
-func (s *Service) DeleteMonitor(id string)  error{
-	return  s.repo.DeleteMonitor(id)
+func (s *Service) DeleteMonitor(id string) error {
+	return s.repo.DeleteMonitor(id)
 }
 
 func (s *Service) GetDashboardStats(userId string) (models.DashboardStats, error) {

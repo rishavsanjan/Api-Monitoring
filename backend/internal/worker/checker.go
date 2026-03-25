@@ -11,6 +11,16 @@ import (
 	"time"
 )
 
+func SecondsSince(ts string) (int64, error) {
+	const layout = "2006-01-02 15:04:05.999999-07"
+	t, err := time.Parse(layout, ts)
+	if err != nil {
+		return 0, err
+	}
+	d := time.Since(t)
+	return int64(d.Seconds()), nil
+}
+
 func RunMonitoringCycle() {
 
 	var monitors []models.Monitor
@@ -62,7 +72,7 @@ func checkMonitor(monitor models.Monitor) {
 
 	database.DB.Create(&result)
 
-	msg, _ := json.Marshal(result)	
+	msg, _ := json.Marshal(result)
 	ws.SendToUser(monitor.UserId, msg)
 
 }

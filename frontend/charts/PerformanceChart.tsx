@@ -1,9 +1,5 @@
-import { MonitorHistory, MonitorPageResponse } from "@/type/props";
-import { useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+
 import {
-    LineChart,
-    Line,
     XAxis,
     YAxis,
     Tooltip,
@@ -27,7 +23,7 @@ interface Props {
 
 
 
-export default function ResponseTimeChart({ data, monitorId }: Props) {
+export default function ResponseTimeChart({ data }: Props) {
     
 
 

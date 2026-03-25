@@ -1,7 +1,8 @@
 import api from "@/lib/axios";
-import { MonitorWithStatus, Stats } from "@/type/props";
+import { MonitorPageResponse, MonitorWithStatus, Stats } from "@/type/props";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { ClipLoader } from "react-spinners";
 
 export const EditMonitorModal = (
@@ -9,14 +10,16 @@ export const EditMonitorModal = (
         onClose,
         name,
         url,
-        interval
+        interval,
+        monitorId
     }
         :
         {
             onClose: () => void,
             name: string,
             url: string,
-            interval: number
+            interval: number,
+            monitorId: string
         }
 ) => {
     const [form, setForm] = useState<{
@@ -31,61 +34,55 @@ export const EditMonitorModal = (
 
     const queryClient = useQueryClient();
 
-    const addMonitorMutation = useMutation({
+    const updateMonitorMutation = useMutation({
         mutationKey: ['monitor-edit'],
         mutationFn: async () => {
-            await api.post("/api/monitors", {
-                name: form.name,
-                URL: form.url,
-                interval: form.interval,
-            })
-        },
-        onMutate: async () => {
-            await queryClient.cancelQueries({ queryKey: ["monitors"] });
-            await queryClient.cancelQueries({ queryKey: ["stats"] });
-            const previousMonitors = queryClient.getQueryData(['monitors']);
-            const previousStats = queryClient.getQueryData(['stats']);
-
-            const optimisticMonitor: MonitorWithStatus = {
-                monitorId: 'temp-' + Date.now(),
+           const res = await api.patch(`/api/monitors/${monitorId}/update`, {
                 name: form.name,
                 url: form.url,
-                method: 'GET',
-                responseTimeMs: 0,
-                lastCheckedAt: String(Date.now()),
-                currentStatus: 200,
-                expectedStatus: 200,
-                status: ''
-            }
+                interval: form.interval,
+            })
 
-            queryClient.setQueryData<MonitorWithStatus[]>(['results'], (old) =>
-                old ? [...old, optimisticMonitor] : [optimisticMonitor]
+            console.log(res.data)
+        },
+        onMutate: async () => {
+            await queryClient.cancelQueries({ queryKey: ["monitor-result", monitorId] });
+            const previousMonitors = queryClient.getQueryData(["monitor-result", monitorId]);
+
+
+
+            queryClient.setQueryData<MonitorPageResponse>(
+                ["monitor-result", monitorId],
+                (old) => {
+                    if (!old) return old;
+
+                    return {
+                        ...old,
+                        monitor: {
+                            ...old.monitor,
+                            Name: name,
+                            URL: url,
+                            Interval: interval
+                        }
+                    };
+                }
             );
 
-            queryClient.setQueryData<Stats>(['stats'], (oldStats) => {
-                if (!oldStats) return { activeMonitors: 1, uptime: 0, averageLatency: 0, incidents: 0 };
 
-                return {
-                    ...oldStats,
-                    activeMonitors: oldStats.activeMonitors + 1,
-                };
-            });
-
-
-            return { previousMonitors, previousStats }
+            return { previousMonitors }
         },
         onError: (_err, _vars, context) => {
             if (context?.previousMonitors) {
-                queryClient.setQueryData(['monitors'], context.previousMonitors);
-            }
-            if (context?.previousStats) {
-                queryClient.setQueryData(['stats'], context.previousStats);
+                queryClient.setQueryData(['monitor-result', monitorId], context.previousMonitors);
             }
         },
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['monitors'] });
-            queryClient.invalidateQueries({ queryKey: ['stats'] });
+            queryClient.invalidateQueries({ queryKey: ['monitor-result', monitorId] });
         },
+        onSuccess: async () => {
+            toast.success("API updated successfully!")
+            onClose();
+        }
     })
 
 
@@ -137,13 +134,13 @@ export const EditMonitorModal = (
                         </button>
                         <button
                             onClick={() => {
-                                addMonitorMutation.mutate()
+                                updateMonitorMutation.mutate()
                             }}
-                            disabled={addMonitorMutation.isPending || form.name.length < 3 || form.url.length < 5}
+                            disabled={updateMonitorMutation.isPending || form.name.length < 3 || form.url.length < 5}
                             className="disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex-1 bg-blue-500 hover:bg-blue-400 text-white font-semibold py-3 rounded-lg transition-colors text-sm shadow-lg shadow-blue-500/20">
                             {
-                                addMonitorMutation.isPending ?
-                                    <ClipLoader />
+                                updateMonitorMutation.isPending ?
+                                    <ClipLoader color="white" size={15}/>
                                     :
                                     'Update Monitor'
 

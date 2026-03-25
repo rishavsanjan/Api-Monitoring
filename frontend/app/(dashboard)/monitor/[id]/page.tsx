@@ -217,11 +217,14 @@ export default function MonitorDetailPage() {
 
                         {/* History */}
                         <HistoryTable history={data?.history ?? []} />
-                        {showModal && <EditMonitorModal
-                            name={data.monitor.Name}
-                            url={data.monitor.URL}
-                            interval={data.monitor.Interval}
-                            onClose={() => setShowModal(false)} />}
+                        {showModal &&
+                            <EditMonitorModal
+                                name={data.monitor.Name}
+                                url={data.monitor.URL}
+                                interval={data.monitor.Interval}
+                                onClose={() => setShowModal(false)}
+                                monitorId={data.monitor.ID}
+                            />}
                     </div>
                 </main>
             </div>

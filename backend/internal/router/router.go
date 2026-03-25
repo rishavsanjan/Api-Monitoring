@@ -18,7 +18,7 @@ func SetupRouter() *gin.Engine {
 
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"}, // allow all
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
@@ -50,10 +50,12 @@ func SetupRouter() *gin.Engine {
 		protected.GET("/monitors", monitorHandler.GetMonitors)
 		protected.DELETE("/monitors/:id", monitorHandler.DeleteMonitor)
 		protected.GET("/monitors/stats", monitorHandler.GetDashboardStats)
+		protected.PATCH("/monitors/:id/update", monitorHandler.UpdateMonitor)
 	}
 
 	protected.GET("/monitors/:id/results", analyticsHandler.GetResults)
 	protected.GET("/monitors/:id/uptime", analyticsHandler.GetUptime)
+
 
 	r.GET("/ws", ws.HandleWS)
 	return r
