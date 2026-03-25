@@ -11,21 +11,13 @@ import (
 	"time"
 )
 
-func SecondsSince(ts string) (int64, error) {
-	const layout = "2006-01-02 15:04:05.999999-07"
-	t, err := time.Parse(layout, ts)
-	if err != nil {
-		return 0, err
-	}
-	d := time.Since(t)
-	return int64(d.Seconds()), nil
-}
-
 func RunMonitoringCycle() {
 
 	var monitors []models.Monitor
 
-	err := database.DB.Find(&monitors).Error
+	err := database.DB.
+		Where("next_run <= ?", time.Now()).
+		Find(&monitors).Error
 
 	if err != nil {
 		log.Println("Error fetching monitors:", err)
@@ -33,9 +25,13 @@ func RunMonitoringCycle() {
 	}
 
 	for _, monitor := range monitors {
+		nextRun := time.Now().Add(time.Duration(monitor.Interval) * time.Second)
+		database.DB.Model(&models.Monitor{}).
+			Where("id = ?", monitor.ID).
+			Update("next_run", nextRun)
+
 		go checkMonitor(monitor)
 	}
-
 }
 
 func checkMonitor(monitor models.Monitor) {
@@ -44,7 +40,11 @@ func checkMonitor(monitor models.Monitor) {
 
 	start := time.Now()
 
-	response, err := http.Get(monitor.URL)
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	response, err := client.Get(monitor.URL)
 
 	responseTime := time.Since(start).Milliseconds()
 
@@ -60,6 +60,7 @@ func checkMonitor(monitor models.Monitor) {
 
 		response.Body.Close()
 	}
+	
 	alertService.HandleStatusChange(monitor.ID, status)
 
 	result := models.MonitorResult{
