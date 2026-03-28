@@ -37,8 +37,8 @@ func (s *Service) CreateMonitor(userId string, name string, url string) error {
 	return s.repo.CreateMonitor(&monitor)
 }
 
-func (s *Service) GetMonitors(userId string) ([]models.MonitorWithStatus, error) {
-	return s.repo.GetUserMonitor(userId)
+func (s *Service) GetMonitors(userId string, page int, search string) ([]models.MonitorWithStatus, int64, error) {
+	return s.repo.GetUserMonitor(userId, page, search)
 }
 
 func (s *Service) DeleteMonitor(id string) error {
@@ -48,3 +48,4 @@ func (s *Service) DeleteMonitor(id string) error {
 func (s *Service) GetDashboardStats(userId string) (models.DashboardStats, error) {
 	return s.repo.GetDashboardStats(userId)
 }
+

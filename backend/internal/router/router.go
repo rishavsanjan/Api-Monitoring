@@ -56,7 +56,6 @@ func SetupRouter() *gin.Engine {
 	protected.GET("/monitors/:id/results", analyticsHandler.GetResults)
 	protected.GET("/monitors/:id/uptime", analyticsHandler.GetUptime)
 
-
 	r.GET("/ws", ws.HandleWS)
 	return r
 }

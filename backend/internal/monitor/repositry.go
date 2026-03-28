@@ -3,7 +3,6 @@ package monitor
 import (
 	"api-monitoring-saas/internal/database"
 	"api-monitoring-saas/internal/models"
-	"fmt"
 )
 
 type Repository struct{}
@@ -16,37 +15,61 @@ func (r *Repository) CreateMonitor(monitor *models.Monitor) error {
 	return database.DB.Create(monitor).Error
 }
 
-func (r *Repository) GetUserMonitor(userId string) ([]models.MonitorWithStatus, error) {
+func (r *Repository) GetUserMonitor(
+	userId string,
+	page int,
+	search string,
+) ([]models.MonitorWithStatus, int64, error) {
+	limit := 5
+	offset := (page - 1) * limit
 
-	var monitors []models.Monitor
+	var total int64
 
-	err := database.DB.Where("user_id = ?", userId).Find(&monitors).Error
+	countQuery := database.DB.Model(&models.Monitor{}).
+		Where("user_id = ?", userId)
 
-	var result []models.MonitorWithStatus
-
-	for _, monitor := range monitors {
-		var log models.MonitorResult
-		err := database.DB.
-			Where("monitor_id = ?", monitor.ID).
-			Order("checked_at desc").
-			First(&log).Error
-
-		fmt.Print(err)
-
-		result = append(result, models.MonitorWithStatus{
-			MonitorId:      monitor.ID,
-			Name:           monitor.Name,
-			URL:            monitor.URL,
-			Method:         monitor.Method,
-			ResponseTimeMs: log.ResponseTimeMs,
-			LastChecked:    log.CheckedAt.String(),
-			ExpectedStatus: monitor.ExpectedStatus,
-			CurrentStatus:  log.StatusCode,
-		})
-
+	if search != "" {
+		countQuery = countQuery.Where("name ILIKE ?", "%"+search+"%")
 	}
 
-	return result, err
+	countQuery.Count(&total)
+
+	var results []models.MonitorWithStatus
+
+	query := `
+		SELECT DISTINCT ON (m.id)
+			m.id AS monitor_id,
+			m.name,
+			m.url,
+			m.method,
+			m.expected_status,
+			r.status_code AS current_status,
+			r.response_time_ms,
+			r.checked_at AS last_checked
+		FROM monitors m
+		LEFT JOIN monitor_results r 
+			ON m.id = r.monitor_id
+		WHERE m.user_id = ?
+	`
+
+	args := []interface{}{userId}
+
+	// 🔍 Search support
+	if search != "" {
+		query += " AND m.name ILIKE ?"
+		args = append(args, "%"+search+"%")
+	}
+
+	query += `
+		ORDER BY m.id, r.checked_at DESC
+		LIMIT ? OFFSET ?
+	`
+
+	args = append(args, limit, offset)
+
+	err := database.DB.Raw(query, args...).Scan(&results).Error
+
+	return results, total, err
 }
 
 func (r *Repository) DeleteMonitor(id string) error {
@@ -152,3 +175,4 @@ func (r *Repository) GetDashboardStats(userId string) (models.DashboardStats, er
 
 	return stats, nil
 }
+

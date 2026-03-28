@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -30,12 +31,12 @@ type UpdateMonitorInput struct {
 
 func (h *Handler) UpdateMonitor(c *gin.Context) {
 	var req UpdateMonitorInput
-	id := c.Param("id");
+	id := c.Param("id")
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
-	
+
 	h.service.UpdateMonitor(id, req)
 
 	c.JSON(http.StatusOK, gin.H{
@@ -64,7 +65,17 @@ func (h *Handler) CreateMonitor(c *gin.Context) {
 func (h *Handler) GetMonitors(c *gin.Context) {
 
 	userID := c.GetString("user_id")
-	monitors, err := h.service.GetMonitors(userID)
+	pageStr := c.DefaultQuery("page", "1")
+	search := c.DefaultQuery("query", "")
+	page, err := strconv.Atoi(pageStr)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid page number: " + err.Error()})
+		return
+	}
+	if page < 1 {
+		page = 1
+	}
+	monitors, total, err := h.service.GetMonitors(userID, page, search)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch monitors"})
@@ -74,6 +85,8 @@ func (h *Handler) GetMonitors(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success":  true,
 		"monitors": monitors,
+		"total":    total,
+		"page":     page,
 	})
 }
 
@@ -92,6 +105,7 @@ func (h *Handler) DeleteMonitor(c *gin.Context) {
 	})
 
 }
+
 
 func (h *Handler) GetDashboardStats(c *gin.Context) {
 	userID := c.GetString("user_id")
