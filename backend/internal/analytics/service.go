@@ -34,3 +34,5 @@ func (s *Service) UpTime(monitorID string) (float64, error) {
 
 	return uptime, nil
 }
+
+

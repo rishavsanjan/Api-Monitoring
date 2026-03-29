@@ -1,6 +1,7 @@
 import { timeAgo } from "@/lib/date";
 import { useRouter } from "next/navigation";
 import { SetStateAction } from "react";
+import { ClipLoader } from "react-spinners";
 type MonitorStatus = "online" | "offline" | "degraded";
 
 interface Monitor {
@@ -31,7 +32,23 @@ const StatusBadge = ({ status }: { status: MonitorStatus }) => {
     );
 };
 
-export const MonitorsTable = ({ monitors, search, setCurrentPage, currentPage, totalMonitors }: { monitors: Monitor[]; search: string, setCurrentPage: React.Dispatch<SetStateAction<number>>, currentPage: number, totalMonitors: number }) => {
+export const MonitorsTable = (
+    {
+        monitors,
+        setCurrentPage,
+        currentPage,
+        totalMonitors,
+        isLoading
+    }
+        :
+        {
+            monitors: Monitor[],
+            setCurrentPage: React.Dispatch<SetStateAction<number>>,
+            currentPage: number,
+            totalMonitors: number,
+            isLoading: boolean
+        }
+) => {
     const router = useRouter();
     const totalPages = Math.ceil(totalMonitors / 5);
     const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -39,7 +56,7 @@ export const MonitorsTable = ({ monitors, search, setCurrentPage, currentPage, t
     return (
         <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
             <div className="overflow-x-auto">
-                <table className="w-full text-left">
+                <table className="w-full ">
                     <thead>
                         <tr className="bg-slate-800/50 border-b border-slate-800">
                             {["Name", "URL", "Status", "Response Time", "Last Checked"].map((h, i) => (
@@ -53,54 +70,74 @@ export const MonitorsTable = ({ monitors, search, setCurrentPage, currentPage, t
                             ))}
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800">
-                        {monitors.map((m) => (
-                            <tr
-                                onClick={() => {
-                                    router.push(`/monitor/${m.monitorId}`)
-                                }}
-                                key={m.monitorId}
-                                className="cursor-pointer hover:bg-slate-800/30 transition-colors group"
-                            >
-                                {/* Name */}
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center flex-shrink-0">
 
-                                        </div>
-                                        <span className="text-sm font-semibold text-white">{m.name}</span>
+                    <tbody className="divide-y divide-slate-800 ">
+                        {isLoading ? (
+                            <tr>
+                                <td colSpan={5} className="py-10">
+                                    <div className="flex justify-center items-center w-full">
+                                        <ClipLoader color="white" />
                                     </div>
                                 </td>
-                                {/* URL */}
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className="text-sm text-slate-500 font-mono">{m.url}</span>
-                                </td>
-                                {/* Status */}
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <StatusBadge status={m.currentStatus === m.expectedStatus ? "online" : "offline"} />
-                                </td>
-                                {/* Response time */}
-                                <td className="px-6 py-4 whitespace-nowrap text-right">
-                                    <span className={`text-sm font-semibold ${m.status === "offline" ? "text-red-400" : "text-slate-300"}`}>
-                                        {m.responseTimeMs}
-                                    </span>
-                                </td>
-                                {/* Last checked */}
-                                <td className="px-6 py-4 whitespace-nowrap text-right">
-                                    <span className="text-sm text-slate-500">{timeAgo(m.lastCheckedAt)}</span>
-                                </td>
-
                             </tr>
-                        ))}
+                        ) :
+                            <>
+                                {monitors.map((m) => (
+                                    <tr
+                                        onClick={() => {
+                                            router.push(`/monitor/${m.monitorId}`)
+                                        }}
+                                        key={m.monitorId}
+                                        className="cursor-pointer hover:bg-slate-800/30 transition-colors group"
+                                    >
+                                        {/* Name */}
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center flex-shrink-0">
+
+                                                </div>
+                                                <span className="text-sm font-semibold text-white">{m.name}</span>
+                                            </div>
+                                        </td>
+                                        {/* URL */}
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className="text-sm text-slate-500 font-mono">{m.url}</span>
+                                        </td>
+                                        {/* Status */}
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <StatusBadge status={m.currentStatus === m.expectedStatus ? "online" : "offline"} />
+                                        </td>
+                                        {/* Response time */}
+                                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                                            <span className={`text-sm font-semibold ${m.status === "offline" ? "text-red-400" : "text-slate-300"}`}>
+                                                {m.responseTimeMs}
+                                            </span>
+                                        </td>
+                                        {/* Last checked */}
+                                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                                            <span className="text-sm text-slate-500">{timeAgo(m.lastCheckedAt)}</span>
+                                        </td>
+
+                                    </tr>
+                                ))}
+                            </>
+                        }
+
+
+
+
+
+
 
                     </tbody>
+
                 </table>
             </div>
 
             {/* Pagination */}
             <div className="px-6 py-4 flex items-center justify-between border-t border-slate-800 bg-slate-800/30">
                 <p className="text-sm text-slate-500">
-                    Showing <span className="font-semibold text-white">{currentPage  === 1 ? 1 : currentPage - 1 * 5}</span> to{" "}
+                    Showing <span className="font-semibold text-white">{currentPage === 1 ? 1 : currentPage - 1 * 5}</span> to{" "}
                     <span className="font-semibold text-white">{currentPage * 5}</span> of{" "}
                     <span className="font-semibold text-white">{totalMonitors}</span> results
                 </p>

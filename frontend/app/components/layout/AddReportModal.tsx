@@ -20,7 +20,7 @@ export const AddMonitorModal = ({ onClose }: { onClose: () => void }) => {
     const addMonitorMutation = useMutation({
         mutationKey: ['monitor-add'],
         mutationFn: async () => {
-            const res = await api.post("/api/monitors", {
+            await api.post("/api/monitors", {
                 name: form.name,
                 URL: form.url,
                 interval: form.interval,

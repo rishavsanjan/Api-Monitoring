@@ -1,6 +1,6 @@
 "use client";
 
-import {  useState } from "react";
+import { useState } from "react";
 import { IconCheck, IconMenu, IconPlus, IconSearch, IconSensors, IconSpeed, IconWarning } from "../../components/icons/icons";
 import { useQueries } from "@tanstack/react-query";
 import api from "@/lib/axios";
@@ -63,7 +63,7 @@ export default function MonitorsPage() {
     const queries = useQueries({
         queries: [
             {
-                queryKey: ['monitors', currentPage, activeTab],
+                queryKey: ['monitors', currentPage, activeTab, search],
 
                 queryFn: async () => {
                     const res = await api.get(`/api/monitors?tab=${activeTab}&page=${currentPage}&limit=${5}&search=${search}`);
@@ -102,6 +102,8 @@ export default function MonitorsPage() {
     if (!monitors || !statistics) {
         return;
     }
+
+    console.log(search)
 
 
     return (
@@ -158,7 +160,13 @@ export default function MonitorsPage() {
                     </div>
 
                     {/* Table */}
-                    <MonitorsTable monitors={monitors} search={search} setCurrentPage={setCurrentPage} currentPage={currentPage} totalMonitors={statistics.activeMonitors} />
+                    <MonitorsTable
+                        monitors={monitors}
+                        setCurrentPage={setCurrentPage}
+                        currentPage={currentPage}
+                        totalMonitors={statistics.activeMonitors}
+                        isLoading={monitorsQuery.isLoading}
+                    />
                 </div>
             </main>
 

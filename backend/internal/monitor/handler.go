@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -66,7 +67,8 @@ func (h *Handler) GetMonitors(c *gin.Context) {
 
 	userID := c.GetString("user_id")
 	pageStr := c.DefaultQuery("page", "1")
-	search := c.DefaultQuery("query", "")
+	search := c.DefaultQuery("search", "")
+	fmt.Print(search)
 	page, err := strconv.Atoi(pageStr)
 	if err != nil {
 		c.JSON(400, gin.H{"error": "Invalid page number: " + err.Error()})
@@ -121,4 +123,30 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 		"stats":   stats,
 	})
 
+}
+
+func (h *Handler) GetMonitorHistory(c *gin.Context) {
+	userID := c.GetString("user_id")
+	monitorId := c.Param("id")
+	pageStr := c.DefaultQuery("page", "1")
+	page, err := strconv.Atoi(pageStr)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid page number: " + err.Error()})
+		return
+	}
+	if page < 1 {
+		page = 1
+	}
+
+	history , err := h.service.GetMonitorHistory(userID, page, monitorId)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "unable to find history"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"history":   history,
+	})
 }

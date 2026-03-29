@@ -49,3 +49,7 @@ func (s *Service) GetDashboardStats(userId string) (models.DashboardStats, error
 	return s.repo.GetDashboardStats(userId)
 }
 
+func (s *Service) GetMonitorHistory(userId string, page int, monitorId string) ([]models.MonitorResult, error) {
+	return  s.repo.GetMonitorHistory(userId, page, monitorId)
+}
+

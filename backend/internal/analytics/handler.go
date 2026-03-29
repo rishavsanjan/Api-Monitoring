@@ -29,9 +29,9 @@ func (h *Handler) GetResults(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"chartData":chartData,
-		"history": results,
-		"monitor": monitor,
+		"chartData": chartData,
+		"history":   results,
+		"monitor":   monitor,
 		"stats": gin.H{
 			"totalLogs":  totalLogs,
 			"uptime":     uptime,
@@ -56,3 +56,5 @@ func (h *Handler) GetUptime(c *gin.Context) {
 		"uptime": uptime,
 	})
 }
+
+

@@ -1,6 +1,7 @@
 "use client"
 import React, { useState } from 'react'
 import Sidebar from '../components/layout/Sidebar';
+import { ClipLoader } from 'react-spinners';
 
 export default function DashboardLayout({
     children,
@@ -14,6 +15,7 @@ export default function DashboardLayout({
 
             <div className="flex-1 flex flex-col">
                 <main className="flex-1  bg-gray-50 overflow-y-auto">
+                   
                     {children}
                 </main>
             </div>

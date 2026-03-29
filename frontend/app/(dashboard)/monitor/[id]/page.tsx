@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { ClipLoader } from "react-spinners";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,36 +42,6 @@ const StatCard = ({ label, value, delta, deltaPositive }: StatCardProps) => (
 );
 
 
-// ─── Topbar ───────────────────────────────────────────────────────────────────
-
-const Topbar = () => (
-    <header className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-800 px-6 py-3 bg-[#101722]">
-        <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-white flex-shrink-0">
-                <IconAnalytics />
-            </div>
-            <h2 className="text-white text-lg font-bold tracking-tight">Monitor Dashboard</h2>
-        </div>
-        <div className="flex items-center gap-3">
-            <div className="hidden md:flex relative w-56">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"><IconSearch /></span>
-                <input
-                    type="text"
-                    placeholder="Search monitors…"
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 pl-9 pr-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
-                />
-            </div>
-            {([<IconBell key="bell" />, <IconUser key="user" />]).map((icon, i) => (
-                <button key={i} className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors">
-                    {icon}
-                </button>
-            ))}
-        </div>
-    </header>
-);
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
 
 function getTimeFromISO(isoString: string): string {
     const date = new Date(isoString);
@@ -86,7 +57,7 @@ export default function MonitorDetailPage() {
     const params = useParams();
     const id = params.id as string;
 
-    const { data } = useQuery({
+    const { data, isLoading } = useQuery({
         queryKey: ['monitor-result', id],
         queryFn: async () => {
             const response = await api.get(`/api/monitors/${id}/results`)
@@ -152,12 +123,16 @@ export default function MonitorDetailPage() {
 
 
     if (!data) {
-        return;
+        return (
+            <div className="bg-[#101722] h-full items-center flex justify-center text-white">
+                <ClipLoader color="white" size={50}/>
+            </div>
+        )
+
     }
 
     return (
         <div className="flex flex-col min-h-screen bg-[#101722] text-white">
-            <Topbar />
             <div className="flex flex-1">
                 <main className="flex-1 overflow-y-auto bg-[#0d131e]">
                     <div className="p-6 lg:px-10 ">

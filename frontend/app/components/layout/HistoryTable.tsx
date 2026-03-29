@@ -1,5 +1,7 @@
+"use client"
 import { formatTimestamp } from '@/lib/date';
 import { MonitorHistory } from '@/type/props'
+import { useRouter } from 'next/navigation';
 import React from 'react'
 
 interface Props {
@@ -22,6 +24,8 @@ const StatusBadge = ({ status }: { status: "UP" | "DOWN" }) => {
 };
 
 const HistoryTable: React.FC<Props> = ({ history }) => {
+    const router = useRouter();
+
     return (
         <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-800">
@@ -55,7 +59,11 @@ const HistoryTable: React.FC<Props> = ({ history }) => {
                 </table>
             </div>
             <div className="px-6 py-4 border-t border-slate-800 text-center">
-                <button className="text-sm font-bold text-blue-400 hover:text-blue-300 hover:underline transition-colors">
+                <button
+                    onClick={() => {
+                        router.push(`/monitor-history/${history[0].MonitorID}`)
+                    }}
+                    className="text-sm font-bold text-blue-400 hover:text-blue-300 hover:underline transition-colors">
                     View Full History →
                 </button>
             </div>

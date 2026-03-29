@@ -176,3 +176,25 @@ func (r *Repository) GetDashboardStats(userId string) (models.DashboardStats, er
 	return stats, nil
 }
 
+func (r *Repository) GetMonitorHistory(userId string, page int, monitorId string) ([]models.MonitorResult, error) {
+	limit := 20
+
+	offset := (page - 1) * limit
+	var results []models.MonitorResult
+
+	err := database.DB.
+		Where("monitor_id = ?", monitorId).
+		Order("checked_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&results).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
+
+
