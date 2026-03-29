@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { IconCheck, IconMenu, IconPlus, IconSearch, IconSensors, IconSpeed, IconWarning } from "../../components/icons/icons";
 import { useQueries } from "@tanstack/react-query";
 import api from "@/lib/axios";
 import { AddMonitorModal } from "@/app/components/layout/AddReportModal";
 import { MonitorsTable } from "@/app/components/layout/MonitorsTable";
+import { useSidebar } from "@/context/SidebarContext";
 
 
 
@@ -56,17 +57,18 @@ interface Stats {
 export default function MonitorsPage() {
     const [search, setSearch] = useState("");
     const [showModal, setShowModal] = useState(false);
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
+    const [debouncedQuery, setDebouncedQuery] = useState("");
     const [activeTab, setActiveTab] = useState('all');
+    const { setCollapsed } = useSidebar();
 
     const queries = useQueries({
         queries: [
             {
-                queryKey: ['monitors', currentPage, activeTab, search],
+                queryKey: ['monitors', currentPage, activeTab, debouncedQuery],
 
                 queryFn: async () => {
-                    const res = await api.get(`/api/monitors?tab=${activeTab}&page=${currentPage}&limit=${5}&search=${search}`);
+                    const res = await api.get(`/api/monitors?tab=${activeTab}&page=${currentPage}&limit=${5}&search=${debouncedQuery}`);
                     console.log(res.data)
                     return res.data.monitors as Monitor[];
                 },
@@ -88,6 +90,16 @@ export default function MonitorsPage() {
             }
         ]
     })
+
+    useEffect(() => {
+        const searhTimeout = setTimeout(() => {
+            setDebouncedQuery(search);
+        }, 500);
+
+        return() => {
+            clearTimeout(searhTimeout);
+        }
+    }, [search])
 
     const [monitorsQuery, statsQuery] = queries;
 
@@ -115,7 +127,7 @@ export default function MonitorsPage() {
                 <header className="h-16 flex items-center justify-between px-8 border-b border-slate-800 bg-[#101722] flex-shrink-0">
                     <div className="flex items-center gap-4">
                         <button
-                            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                            onClick={() => setCollapsed(prev => !prev)}
                             className="text-slate-500 hover:text-white transition-colors"
                         >
                             <IconMenu />
@@ -132,7 +144,9 @@ export default function MonitorsPage() {
                             <input
                                 type="text"
                                 value={search}
-                                onChange={(e) => setSearch(e.target.value)}
+                                onChange={(e) => {
+                                    setSearch(e.target.value)
+                                }}
                                 placeholder="Search monitors…"
                                 className="w-56 bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
                             />
