@@ -1,27 +1,29 @@
 "use client"
 import { useEffect, useRef, useState } from "react";
-import { IconDashboard, IconIncidents, IconMonitors, IconPulse, IconReports, IconSettings } from "../icons/icons";
+import { IconDashboard, IconIncidents, IconMonitors, IconPlus, IconPulse, IconReports, IconSettings } from "../icons/icons";
 import { useSidebar } from "@/context/SidebarContext";
+import { useRouter } from "next/navigation";
 
 type NavItem = {
     label: string;
     icon: React.ReactNode;
     active?: boolean;
+    link: string
 };
 
 const navItems: NavItem[] = [
-    { label: "Dashboard", icon: <IconDashboard /> },
-    { label: "Monitors", icon: <IconMonitors />, active: true },
-    { label: "Incidents", icon: <IconIncidents /> },
-    { label: "Reports", icon: <IconReports /> },
-    { label: "Settings", icon: <IconSettings /> },
+    { label: "Dashboard", icon: <IconDashboard />, link: '/dashboard' },
+    { label: "Monitors", icon: <IconMonitors />, link: '/dashboard', active: true },
+    { label: "Incidents", icon: <IconIncidents />, link: '/dashboard/create-monitor' },
+    { label: "Create", icon: <IconPlus />, link: '/http' },
+    { label: "Settings", icon: <IconSettings />, link: '/create-monitor' },
 ];
 
 export default function Sidebar() {
     const { collapsed } = useSidebar();
     const [sidebarWidth, setSidebarWidth] = useState(260)
     const isResizing = useRef(false);
-
+    const router = useRouter();
     const startResizing = () => {
         isResizing.current = true
         document.body.style.userSelect = "none"
@@ -82,9 +84,11 @@ export default function Sidebar() {
                 {/* Nav */}
                 <nav className="flex flex-col gap-1">
                     {navItems.map((item) => (
-                        <a
+                        <button
+                            onClick={() => {
+                                router.push(item.link)
+                            }}
                             key={item.label}
-                            href="#"
                             title={collapsed ? item.label : undefined}
                             className={`
               flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
@@ -96,8 +100,9 @@ export default function Sidebar() {
             `}
                         >
                             <span className="flex-shrink-0">{item.icon}</span>
-                            {!collapsed && <span className="text-sm font-medium">{item.label}</span>}
-                        </a>
+                            {
+                                !collapsed && <span className="text-sm font-medium">{item.label}</span>}
+                        </button>
                     ))}
                 </nav>
             </div>
