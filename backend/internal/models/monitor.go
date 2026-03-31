@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/datatypes"
+)
 
 type Monitor struct {
 	ID             string    `gorm:"type:uuid;primaryKey"`
@@ -12,4 +16,6 @@ type Monitor struct {
 	Interval       int       `gorm:"default:60"`
 	NextRun        time.Time `gorm:"type:timestamp;default:CURRENT_TIMESTAMP;index"`
 	CreatedAt      time.Time
+	Config         datatypes.JSON `gorm:"type:jsonb"`
+	Type           string         `gorm:"default:http"`
 }

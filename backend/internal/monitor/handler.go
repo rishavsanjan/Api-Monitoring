@@ -19,9 +19,11 @@ func NewHandler(service *Service) *Handler {
 }
 
 type CreateMonitorRequest struct {
-	Name     string `json:"name"`
-	URL      string `json:"URL"`
-	Interval int    `json:"interval"`
+	Name     string                 `json:"name"`
+	URL      string                 `json:"URL"`
+	Interval int                    `json:"interval"`
+	Type     string                 `json:"type"`
+	Config   map[string]interface{} `json:"config"`
 }
 
 type UpdateMonitorInput struct {
@@ -56,7 +58,7 @@ func (h *Handler) CreateMonitor(c *gin.Context) {
 
 	userId := c.GetString("user_id")
 
-	h.service.CreateMonitor(userId, req.Name, req.URL)
+	h.service.CreateMonitor(userId, req.Name, req.URL, req.Type, req.Config)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "monitor created",
@@ -108,7 +110,6 @@ func (h *Handler) DeleteMonitor(c *gin.Context) {
 
 }
 
-
 func (h *Handler) GetDashboardStats(c *gin.Context) {
 	userID := c.GetString("user_id")
 	stats, err := h.service.GetDashboardStats(userID)
@@ -138,7 +139,7 @@ func (h *Handler) GetMonitorHistory(c *gin.Context) {
 		page = 1
 	}
 
-	history , err := h.service.GetMonitorHistory(userID, page, monitorId)
+	history, err := h.service.GetMonitorHistory(userID, page, monitorId)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "unable to find history"})
@@ -147,6 +148,6 @@ func (h *Handler) GetMonitorHistory(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"history":   history,
+		"history": history,
 	})
 }

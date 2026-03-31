@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"api-monitoring-saas/internal/models"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,8 +22,11 @@ func (s *Service) UpdateMonitor(id string, input UpdateMonitorInput) error {
 	return s.repo.UpdateMonitor(id, input)
 }
 
-func (s *Service) CreateMonitor(userId string, name string, url string) error {
-
+func (s *Service) CreateMonitor(userId string, name string, url string, monitorType string, config map[string]interface{}) error {
+	jsonConfig, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
 	monitor := models.Monitor{
 		ID:             uuid.New().String(),
 		UserId:         userId,
@@ -32,6 +36,8 @@ func (s *Service) CreateMonitor(userId string, name string, url string) error {
 		ExpectedStatus: 200,
 		Interval:       60,
 		CreatedAt:      time.Now(),
+		Type:           monitorType,
+		Config:         jsonConfig,
 	}
 
 	return s.repo.CreateMonitor(&monitor)
@@ -50,6 +56,5 @@ func (s *Service) GetDashboardStats(userId string) (models.DashboardStats, error
 }
 
 func (s *Service) GetMonitorHistory(userId string, page int, monitorId string) ([]models.MonitorResult, error) {
-	return  s.repo.GetMonitorHistory(userId, page, monitorId)
+	return s.repo.GetMonitorHistory(userId, page, monitorId)
 }
-

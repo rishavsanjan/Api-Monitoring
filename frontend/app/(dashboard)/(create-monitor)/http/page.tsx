@@ -169,34 +169,6 @@ const Input = ({ label, error, prefixIcon, className = "", ...props }: InputProp
     </div>
 );
 
-// ─── Select ───────────────────────────────────────────────────────────────────
-
-interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
-    label: string;
-    options: { value: string; label: string }[];
-}
-
-const Select = ({ label, options, ...props }: SelectProps) => (
-    <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-slate-300">{label}</label>
-        <div className="relative">
-            <select
-                className="w-full appearance-none bg-slate-800/60 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all pr-10"
-                {...props}
-            >
-                {options.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-            </select>
-            {/* Custom chevron */}
-            <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
-                <svg viewBox="0 0 20 20" fill="none" className="w-4 h-4">
-                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 8l4 4 4-4" />
-                </svg>
-            </div>
-        </div>
-    </div>
-);
 
 // ─── Form Section Card ────────────────────────────────────────────────────────
 
@@ -209,16 +181,7 @@ const FormSection = ({ title, children }: { title?: string; children: React.Reac
     </div>
 );
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
 
-const HTTP_METHODS: { value: HttpMethod; label: string }[] = [
-    { value: "GET", label: "GET" },
-    { value: "POST", label: "POST" },
-    { value: "PUT", label: "PUT" },
-    { value: "PATCH", label: "PATCH" },
-    { value: "DELETE", label: "DELETE" },
-    { value: "HEAD", label: "HEAD" },
-];
 
 export default function CreateMonitorPage() {
     const [form, setForm] = useState<MonitorForm>({
@@ -255,105 +218,106 @@ export default function CreateMonitorPage() {
     };
 
     return (
-            <div className="mx-auto w-full">
+        <div className="mx-auto w-full">
 
-                {success ? (
-                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-10 text-center flex flex-col items-center gap-4">
-                        <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth={2.5} className="w-8 h-8">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                        </div>
+            {success ? (
+                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-10 text-center flex flex-col items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth={2.5} className="w-8 h-8">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p className="text-white font-bold text-lg">Monitor Created!</p>
+                        <p className="text-slate-400 text-sm mt-1">
+                            <span className="text-white font-medium">{form.name || "Your monitor"}</span> is now active and monitoring{" "}
+                            <code className="text-blue-400 font-mono text-xs">{form.url || "your endpoint"}</code>.
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => { setSuccess(false); setForm({ name: "", url: "", method: "GET", statusCode: 200, frequency: 5, sslMonitoring: true }); }}
+                        className="mt-2 px-6 py-2.5 bg-blue-500 hover:bg-blue-400 text-white text-sm font-bold rounded-lg transition-colors"
+                    >
+                        Create Another
+                    </button>
+                </div>
+            ) : (
+                <form onSubmit={handleSubmit} noValidate className="space-y-5">
+
+                    {/* Basic Info */}
+                    <FormSection title="Basic Info">
+                        
+                        <Input
+                            label="Monitor Name"
+                            placeholder="e.g. Main API Gateway"
+                            value={form.name}
+                            onChange={(e) => setForm({ ...form, name: e.target.value })}
+                            error={errors.name}
+                        />
+                        <Input
+                            label="URL to Monitor"
+                            type="url"
+                            placeholder="https://api.example.com/health"
+                            value={form.url}
+                            onChange={(e) => setForm({ ...form, url: e.target.value })}
+                            error={errors.url}
+                            prefixIcon={<IconLink />}
+                        />
+
                         <div>
-                            <p className="text-white font-bold text-lg">Monitor Created!</p>
-                            <p className="text-slate-400 text-sm mt-1">
-                                <span className="text-white font-medium">{form.name || "Your monitor"}</span> is now active and monitoring{" "}
-                                <code className="text-blue-400 font-mono text-xs">{form.url || "your endpoint"}</code>.
-                            </p>
+                            <p className="text-sm text-slate-300">HTTP Method</p>
+                            <HTTPMethodsList />
+
                         </div>
+                    </FormSection>
+
+                    {/* Configuration */}
+                    <FormSection title="Configuration">
+                        <FrequencySlider
+                            value={form.frequency}
+                            onChange={(v) => setForm({ ...form, frequency: v })}
+                        />
+                        <div className="pt-4 border-t border-slate-800">
+                            <Toggle
+                                checked={form.sslMonitoring}
+                                onChange={(v) => setForm({ ...form, sslMonitoring: v })}
+                                label="Enable SSL monitoring"
+                            />
+                        </div>
+                    </FormSection>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-end gap-3 pt-2">
                         <button
-                            onClick={() => { setSuccess(false); setForm({ name: "", url: "", method: "GET", statusCode: 200, frequency: 5, sslMonitoring: true }); }}
-                            className="mt-2 px-6 py-2.5 bg-blue-500 hover:bg-blue-400 text-white text-sm font-bold rounded-lg transition-colors"
+                            type="button"
+                            className="px-6 py-2.5 text-sm font-semibold text-slate-400 hover:text-white transition-colors"
                         >
-                            Create Another
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="flex items-center gap-2 px-8 py-2.5 bg-blue-500 hover:bg-blue-400 disabled:bg-blue-500/60 text-white rounded-lg text-sm font-bold shadow-lg shadow-blue-500/20 transition-all"
+                        >
+                            {loading ? (
+                                <>
+                                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                                    </svg>
+                                    Creating…
+                                </>
+                            ) : (
+                                <>
+                                    <IconPlus />
+                                    Create Monitor
+                                </>
+                            )}
                         </button>
                     </div>
-                ) : (
-                    <form onSubmit={handleSubmit} noValidate className="space-y-5">
-
-                        {/* Basic Info */}
-                        <FormSection title="Basic Info">
-                            <Input
-                                label="Monitor Name"
-                                placeholder="e.g. Main API Gateway"
-                                value={form.name}
-                                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                error={errors.name}
-                            />
-                            <Input
-                                label="URL to Monitor"
-                                type="url"
-                                placeholder="https://api.example.com/health"
-                                value={form.url}
-                                onChange={(e) => setForm({ ...form, url: e.target.value })}
-                                error={errors.url}
-                                prefixIcon={<IconLink />}
-                            />
-
-                            <div>
-                                <p className="text-sm text-slate-300">HTTP Method</p>
-                                <HTTPMethodsList />
-
-                            </div>
-                        </FormSection>
-
-                        {/* Configuration */}
-                        <FormSection title="Configuration">
-                            <FrequencySlider
-                                value={form.frequency}
-                                onChange={(v) => setForm({ ...form, frequency: v })}
-                            />
-                            <div className="pt-4 border-t border-slate-800">
-                                <Toggle
-                                    checked={form.sslMonitoring}
-                                    onChange={(v) => setForm({ ...form, sslMonitoring: v })}
-                                    label="Enable SSL monitoring"
-                                />
-                            </div>
-                        </FormSection>
-
-                        {/* Actions */}
-                        <div className="flex items-center justify-end gap-3 pt-2">
-                            <button
-                                type="button"
-                                className="px-6 py-2.5 text-sm font-semibold text-slate-400 hover:text-white transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="flex items-center gap-2 px-8 py-2.5 bg-blue-500 hover:bg-blue-400 disabled:bg-blue-500/60 text-white rounded-lg text-sm font-bold shadow-lg shadow-blue-500/20 transition-all"
-                            >
-                                {loading ? (
-                                    <>
-                                        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                                        </svg>
-                                        Creating…
-                                    </>
-                                ) : (
-                                    <>
-                                        <IconPlus />
-                                        Create Monitor
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    </form>
-                )}
-            </div>
+                </form>
+            )}
+        </div>
 
 
     );

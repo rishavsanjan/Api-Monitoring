@@ -6,13 +6,16 @@ import (
 	"api-monitoring-saas/internal/models"
 	"api-monitoring-saas/internal/ws"
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
 func RunMonitoringCycle() {
-
+	alertRepo := alert.NewRepository()
+	alertService := alert.NewService(alertRepo)
 	var monitors []models.Monitor
 
 	err := database.DB.
@@ -24,19 +27,44 @@ func RunMonitoringCycle() {
 		return
 	}
 
-	for _, monitor := range monitors {
+	for _, m := range monitors {
+		monitor := m
 		nextRun := time.Now().Add(time.Duration(monitor.Interval) * time.Second)
 		database.DB.Model(&models.Monitor{}).
 			Where("id = ?", monitor.ID).
 			Update("next_run", nextRun)
+		switch monitor.Type {
+		case "http":
+			go checkHttpMonitor(monitor, alertService)
+		case "keyword":
+			go func(m models.Monitor) {
+				status, responseTime, statusCode, err := RunKeywordCheck(m, alertService)
 
-		go checkMonitor(monitor)
+				if err != nil {
+					status = "DOWN"
+				}
+
+				result := models.MonitorResult{
+					MonitorID:      m.ID,
+					Status:         status,
+					StatusCode:     statusCode,
+					ResponseTimeMs: int(responseTime),
+					CheckedAt:      time.Now(),
+				}
+
+				database.DB.Create(&result)
+
+				msg, _ := json.Marshal(result)
+				ws.SendToUser(m.UserId, msg)
+
+			}(monitor)
+
+		}
+
 	}
 }
 
-func checkMonitor(monitor models.Monitor) {
-	alertRepo := alert.NewRepository()
-	alertService := alert.NewService(alertRepo)
+func checkHttpMonitor(monitor models.Monitor, alertService *alert.Service) {
 
 	start := time.Now()
 
@@ -60,7 +88,7 @@ func checkMonitor(monitor models.Monitor) {
 
 		response.Body.Close()
 	}
-	
+
 	alertService.HandleStatusChange(monitor.ID, status)
 
 	result := models.MonitorResult{
@@ -76,4 +104,74 @@ func checkMonitor(monitor models.Monitor) {
 	msg, _ := json.Marshal(result)
 	ws.SendToUser(monitor.UserId, msg)
 
+}
+
+func RunKeywordCheck(
+	monitor models.Monitor,
+	alertService *alert.Service,
+) (string, int64, int, error) {
+
+	start := time.Now()
+
+	var cfg struct {
+		Headers        map[string]string `json:"headers"`
+		MustContain    string            `json:"mustContain"`
+		MustNotContain string            `json:"mustNotContain"`
+	}
+
+	if err := json.Unmarshal(monitor.Config, &cfg); err != nil {
+		return "DOWN", 0, 0, err
+	}
+
+	req, err := http.NewRequest(monitor.Method, monitor.URL, nil)
+	if err != nil {
+		return "DOWN", 0, 0, err
+	}
+
+	for key, value := range cfg.Headers {
+		req.Header.Set(key, value)
+	}
+
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "DOWN", 0, 0, err
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(io.LimitReader(resp.Body, 1_000_000))
+	if err != nil {
+		return "DOWN", 0, 0, err
+	}
+
+	body := string(bodyBytes)
+
+	status := "UP"
+
+
+	statusCode := resp.StatusCode
+
+	
+	if statusCode != monitor.ExpectedStatus {
+		status = "DOWN"
+	}
+
+	
+	if cfg.MustContain != "" && !strings.Contains(body, cfg.MustContain) {
+		status = "DOWN"
+	}
+
+	if cfg.MustNotContain != "" && strings.Contains(body, cfg.MustNotContain) {
+		status = "DOWN"
+	}
+
+	responseTime := time.Since(start).Milliseconds()
+
+	
+	alertService.HandleStatusChange(monitor.ID, status)
+
+	return status, responseTime, statusCode, nil
 }
