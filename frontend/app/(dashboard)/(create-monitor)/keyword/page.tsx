@@ -4,27 +4,13 @@ import { IconLink, IconPlus, IconShield } from "@/app/components/icons/icons";
 import AuthToken from "@/app/components/layout/AuthToken";
 import FrequencySlider from "@/app/components/layout/FrequenctSlider";
 import Input from "@/app/components/layout/Input";
+import JsonBodyEditor from "@/app/components/layout/JsonBodyEditor";
 import api from "@/lib/axios";
-import { MonitorWithStatus, Stats } from "@/type/props";
+import { KeywordMonitorForm, MonitorWithStatus, Stats } from "@/type/props";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD";
-
-interface KeywordMonitorForm {
-    name: string;
-    url: string;
-    method: string;
-    statusCode: number;
-    interval: number;
-    keyword: string;
-    authorizationToken: string,
-    requestBody: string
-}
 
 
 const Toggle = ({
@@ -85,13 +71,15 @@ export default function CreateMonitorPage() {
         interval: 60,
         keyword: "",
         authorizationToken: "",
-        requestBody:""
+        requestBody: "",
+        type: "keyword"
 
     });
     const [errors, setErrors] = useState<Partial<Record<keyof KeywordMonitorForm, string>>>({});
     const [successModel, setSuccessModel] = useState(false);
     const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
     const validate = (): typeof errors => {
+
         const e: typeof errors = {};
         if (!form.name.trim()) e.name = "Monitor name is required";
         if (!form.url.trim()) e.url = "URL is required";
@@ -102,8 +90,7 @@ export default function CreateMonitorPage() {
         return e;
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = async () => {
         const errs = validate();
         if (Object.keys(errs).length) { setErrors(errs); return; }
         setErrors({});
@@ -117,11 +104,17 @@ export default function CreateMonitorPage() {
     const addMonitorMutation = useMutation({
         mutationKey: ['monitor-add'],
         mutationFn: async () => {
+            const config = {
+                "Headers": form.authorizationToken,
+                "RequestBody": form.requestBody,
+                "MustContain": form.keyword
+            }
             await api.post("/api/monitors", {
                 name: form.name,
                 URL: form.url,
                 interval: form.interval,
-                type: "http"
+                type: form.keyword,
+                config: config
             })
         },
         onMutate: async () => {
@@ -202,7 +195,7 @@ export default function CreateMonitorPage() {
                     </button> */}
                 </div>
             ) : (
-                <form onSubmit={handleSubmit} noValidate className="space-y-5">
+                <div className="space-y-5">
 
                     {/* Basic Info */}
                     <FormSection title="Basic Info">
@@ -228,7 +221,7 @@ export default function CreateMonitorPage() {
                             label="Keyword to look for"
                             placeholder="e.g. <span>Welcome</span> or products"
                             description="The keyword must be present in the response HTML source. You can use HTML markup, too. For api add only the keyword"
-                            value={form.url}
+                            value={form.keyword}
                             onChange={(e) => setForm({ ...form, keyword: e.target.value })}
                             error={errors.keyword}
                             prefixIcon={<IconLink />}
@@ -272,31 +265,38 @@ export default function CreateMonitorPage() {
                                 {/* Auth Token */}
                                 <AuthToken />
 
-                                <div>
-                                    <p className="text-sm text-slate-300">HTTP Method</p>
-                                    <div className='flex flex-row rounded-xl items-center justify-between'>
-                                        {
-                                            methods.map((item) => {
-                                                return (
-                                                    <button
-                                                        onClick={() => {
+                                <div className="flex flex-col space-y-4">
+                                    <div>
+                                        <p className="text-sm text-slate-300">HTTP Method</p>
+                                        <div className='flex flex-row rounded-xl items-center justify-between'>
+                                            {
+                                                methods.map((item) => {
+                                                    return (
+                                                        <button
+                                                            onClick={() => {
 
-                                                            setForm(prev => ({ ...prev, method: item }))
+                                                                setForm(prev => ({ ...prev, method: item }))
 
-                                                        }}
-                                                        className={`disabled:cursor-not-allowed border border-gray-400 p-2 w-full cursor-pointer ${item === form.method ? 'text-blue-500 bg-gray-800' : 'text-white hover:bg-gray-800'}`} key={item}>
-                                                        {item}
-                                                    </button>
-                                                )
+                                                            }}
+                                                            className={`disabled:cursor-not-allowed border border-gray-400 p-2 w-full cursor-pointer ${item === form.method ? 'text-blue-500 bg-gray-800' : 'text-white hover:bg-gray-800'}`} key={item}>
+                                                            {item}
+                                                        </button>
+                                                    )
 
-                                            })
-                                        }
+                                                })
+                                            }
 
+                                        </div>
                                     </div>
+
                                     <div>
                                         {
                                             form.method === "PUT" || form.method === "POST" &&
-                                            <input type="text" />
+                                            <>
+                                                <label className="text-sm font-medium text-slate-300">Request Body</label>
+                                                <JsonBodyEditor requestBody={form.requestBody} setForm={setForm} />
+                                            </>
+
                                         }
                                     </div>
                                 </div>
@@ -309,14 +309,16 @@ export default function CreateMonitorPage() {
 
                     {/* Actions */}
                     <div className="flex items-center justify-end gap-3 pt-2">
-                        <button
-                            type="button"
+                        {/* <button
+                            
                             className="px-6 py-2.5 text-sm font-semibold text-slate-400 hover:text-white transition-colors"
                         >
                             Cancel
-                        </button>
+                        </button> */}
                         <button
-                            type="submit"
+                            onClick={() => {
+                                handleSubmit()
+                            }}
                             disabled={addMonitorMutation.isPending}
                             className="flex items-center gap-2 px-8 py-2.5 bg-blue-500 hover:bg-blue-400 disabled:bg-blue-500/60 text-white rounded-lg text-sm font-bold shadow-lg shadow-blue-500/20 transition-all"
                         >
@@ -336,7 +338,7 @@ export default function CreateMonitorPage() {
                             )}
                         </button>
                     </div>
-                </form>
+                </div>
             )}
         </div>
 

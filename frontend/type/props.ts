@@ -73,4 +73,15 @@ export interface MonitorPageResponse {
     }
 }
 
+export interface KeywordMonitorForm {
+    name: string;
+    url: string;
+    method: string;
+    statusCode: number;
+    interval: number;
+    keyword: string;
+    authorizationToken: string,
+    requestBody: string
+    type : string
+}
 
