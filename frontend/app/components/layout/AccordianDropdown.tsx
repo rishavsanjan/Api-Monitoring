@@ -1,17 +1,21 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const options = [
   {
+    id :1 ,
     title: "HTTP / website monitoring",
     desc: "Monitor your website or API endpoint using HTTP(S).",
   },
   {
+    id : 2,
     title: "Keyword monitoring",
     desc: "Check for specific text in response body.",
   },
   {
+    id : 3,
     title: "Ping monitoring",
     desc: "Ensure your server is always reachable.",
   },
@@ -20,7 +24,7 @@ const options = [
 export default function MonitorDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const [selected, setSelected] = useState(options[0]);
-
+  const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // close on outside click
@@ -61,6 +65,12 @@ export default function MonitorDropdown() {
             <div
               key={index}
               onClick={() => {
+                
+                if(index + 1 === 1){
+                  router.push('/http')
+                }else if(index + 1 === 2){
+                  router.push('/keyword');
+                }
                 setSelected(item);
                 setIsOpen(false);
               }}
