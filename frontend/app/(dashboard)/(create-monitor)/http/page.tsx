@@ -1,8 +1,11 @@
 "use client";
 
-import { IconBell, IconChevronRight, IconDashboard, IconHelp, IconIncidents, IconLink, IconMonitors, IconPlus, IconPulse, IconSettings, IconShield, IconStatusPages } from "@/app/components/icons/icons";
-import HTTPMethodsList from "@/app/components/layout/MethodsList";
+import { IconLink, IconPlus, IconShield } from "@/app/components/icons/icons";
+import api from "@/lib/axios";
+import { MonitorWithStatus, Stats } from "@/type/props";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -13,28 +16,9 @@ interface MonitorForm {
     url: string;
     method: HttpMethod;
     statusCode: number;
-    frequency: number;
-    sslMonitoring: boolean;
+    interval: number;
 }
 
-// ─── SVG Icons ────────────────────────────────────────────────────────────────
-
-
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
-
-type NavItem = { label: string; icon: React.ReactNode; active?: boolean; dividerBefore?: boolean };
-
-const navItems: NavItem[] = [
-    { label: "Dashboard", icon: <IconDashboard /> },
-    { label: "Monitors", icon: <IconMonitors />, active: true },
-    { label: "Incidents", icon: <IconIncidents /> },
-    { label: "Status Pages", icon: <IconStatusPages /> },
-    { label: "Settings", icon: <IconSettings />, dividerBefore: true },
-];
-
-
-
-// ─── Custom Toggle ────────────────────────────────────────────────────────────
 
 const Toggle = ({
     checked,
@@ -66,7 +50,6 @@ const Toggle = ({
     </label>
 );
 
-// ─── Frequency Slider ─────────────────────────────────────────────────────────
 
 const FREQ_LABELS = ["Every 1 min", "5 mins", "15 mins", "30 mins", "1 hour"];
 
@@ -77,13 +60,9 @@ const FrequencySlider = ({
     value: number;
     onChange: (v: number) => void;
 }) => {
-    const pct = ((value - 1) / 59) * 100;
-    const label =
-        value === 1 ? "Every 1 minute" :
-            value <= 5 ? `Every ${value} minutes` :
-                value <= 15 ? "Every 15 minutes" :
-                    value <= 30 ? "Every 30 minutes" :
-                        "Every hour";
+    const pct = ((value - 1) / 3600) * 100;
+    const label = `Every ${value / 60} minutes`
+
 
     return (
         <div className="space-y-4">
@@ -189,12 +168,10 @@ export default function CreateMonitorPage() {
         url: "",
         method: "GET",
         statusCode: 200,
-        frequency: 5,
-        sslMonitoring: true,
+        interval: 60
     });
     const [errors, setErrors] = useState<Partial<Record<keyof MonitorForm, string>>>({});
-    const [loading, setLoading] = useState(false);
-    const [success, setSuccess] = useState(false);
+    const [successModel, setSuccessModel] = useState(false);
 
     const validate = (): typeof errors => {
         const e: typeof errors = {};
@@ -211,16 +188,80 @@ export default function CreateMonitorPage() {
         const errs = validate();
         if (Object.keys(errs).length) { setErrors(errs); return; }
         setErrors({});
-        setLoading(true);
-        await new Promise((r) => setTimeout(r, 1400));
-        setLoading(false);
-        setSuccess(true);
+        addMonitorMutation.mutate();
     };
 
+    const methods = ["GET", "POST", "PUT", "OPTIONS"]
+
+    const queryClient = useQueryClient();
+
+    const addMonitorMutation = useMutation({
+        mutationKey: ['monitor-add'],
+        mutationFn: async () => {
+            await api.post("/api/monitors", {
+                name: form.name,
+                URL: form.url,
+                interval: form.interval,
+                type: "http"
+            })
+        },
+        onMutate: async () => {
+            await queryClient.cancelQueries({ queryKey: ["monitors"] });
+            await queryClient.cancelQueries({ queryKey: ["stats"] });
+            const previousMonitors = queryClient.getQueryData(['monitors']);
+            const previousStats = queryClient.getQueryData(['stats']);
+
+            const optimisticMonitor: MonitorWithStatus = {
+                monitorId: 'temp-' + Date.now(),
+                name: form.name,
+                url: form.url,
+                method: 'GET',
+                responseTimeMs: 0,
+                lastCheckedAt: String(Date.now()),
+                currentStatus: 200,
+                expectedStatus: 200,
+                status: ''
+            }
+
+            queryClient.setQueryData<MonitorWithStatus[]>(['results'], (old) =>
+                old ? [...old, optimisticMonitor] : [optimisticMonitor]
+            );
+
+            queryClient.setQueryData<Stats>(['stats'], (oldStats) => {
+                if (!oldStats) return { activeMonitors: 1, uptime: 0, averageLatency: 0, incidents: 0 };
+
+                return {
+                    ...oldStats,
+                    activeMonitors: oldStats.activeMonitors + 1,
+                };
+            });
+
+
+            return { previousMonitors, previousStats }
+        },
+        onSuccess: async () => {
+            setSuccessModel(true);
+            toast.success("Monitor created successfully!");
+        },
+        onError: (_err, _vars, context) => {
+            if (context?.previousMonitors) {
+                queryClient.setQueryData(['monitors'], context.previousMonitors);
+            }
+            if (context?.previousStats) {
+                queryClient.setQueryData(['stats'], context.previousStats);
+            }
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ['monitors'] });
+            queryClient.invalidateQueries({ queryKey: ['stats'] });
+        },
+    })
+
+    console.log(form)
     return (
         <div className="mx-auto w-full">
 
-            {success ? (
+            {successModel && addMonitorMutation.isSuccess ? (
                 <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-10 text-center flex flex-col items-center gap-4">
                     <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
                         <svg viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth={2.5} className="w-8 h-8">
@@ -235,7 +276,7 @@ export default function CreateMonitorPage() {
                         </p>
                     </div>
                     <button
-                        onClick={() => { setSuccess(false); setForm({ name: "", url: "", method: "GET", statusCode: 200, frequency: 5, sslMonitoring: true }); }}
+                        onClick={() => { setSuccessModel(false); setForm({ name: "", url: "", method: "GET", statusCode: 200, interval: 5 }); }}
                         className="mt-2 px-6 py-2.5 bg-blue-500 hover:bg-blue-400 text-white text-sm font-bold rounded-lg transition-colors"
                     >
                         Create Another
@@ -246,7 +287,7 @@ export default function CreateMonitorPage() {
 
                     {/* Basic Info */}
                     <FormSection title="Basic Info">
-                        
+
                         <Input
                             label="Monitor Name"
                             placeholder="e.g. Main API Gateway"
@@ -266,7 +307,25 @@ export default function CreateMonitorPage() {
 
                         <div>
                             <p className="text-sm text-slate-300">HTTP Method</p>
-                            <HTTPMethodsList />
+                            <div className='flex flex-row rounded-xl items-center justify-between'>
+                                {
+                                    methods.map((item) => {
+                                        return (
+                                            <button
+                                                onClick={() => {
+                                                    setForm(prev => ({ ...prev, method: 'GET' }))
+
+                                                }}
+                                                disabled={item != 'GET'}
+                                                className={`disabled:cursor-not-allowed border border-gray-400 p-2 w-full cursor-pointer ${item === form.method ? 'text-blue-500 bg-gray-800' : 'text-white hover:bg-gray-800'}`} key={item}>
+                                                {item}
+                                            </button>
+                                        )
+
+                                    })
+                                }
+
+                            </div>
 
                         </div>
                     </FormSection>
@@ -274,16 +333,16 @@ export default function CreateMonitorPage() {
                     {/* Configuration */}
                     <FormSection title="Configuration">
                         <FrequencySlider
-                            value={form.frequency}
-                            onChange={(v) => setForm({ ...form, frequency: v })}
+                            value={form.interval}
+                            onChange={(v) => setForm({ ...form, interval: v * 60 })}
                         />
-                        <div className="pt-4 border-t border-slate-800">
+                        {/* <div className="pt-4 border-t border-slate-800">
                             <Toggle
                                 checked={form.sslMonitoring}
                                 onChange={(v) => setForm({ ...form, sslMonitoring: v })}
                                 label="Enable SSL monitoring"
                             />
-                        </div>
+                        </div> */}
                     </FormSection>
 
                     {/* Actions */}
@@ -296,10 +355,10 @@ export default function CreateMonitorPage() {
                         </button>
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={addMonitorMutation.isPending}
                             className="flex items-center gap-2 px-8 py-2.5 bg-blue-500 hover:bg-blue-400 disabled:bg-blue-500/60 text-white rounded-lg text-sm font-bold shadow-lg shadow-blue-500/20 transition-all"
                         >
-                            {loading ? (
+                            {addMonitorMutation.isPending ? (
                                 <>
                                     <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />

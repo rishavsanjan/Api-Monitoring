@@ -7,20 +7,19 @@ import { useRouter } from "next/navigation";
 type NavItem = {
     label: string;
     icon: React.ReactNode;
-    active?: boolean;
     link: string
 };
 
 const navItems: NavItem[] = [
     { label: "Dashboard", icon: <IconDashboard />, link: '/dashboard' },
-    { label: "Monitors", icon: <IconMonitors />, link: '/dashboard', active: true },
+    { label: "Monitors", icon: <IconMonitors />, link: '/dashboard' },
     { label: "Incidents", icon: <IconIncidents />, link: '/dashboard/create-monitor' },
     { label: "Create", icon: <IconPlus />, link: '/http' },
     { label: "Settings", icon: <IconSettings />, link: '/create-monitor' },
 ];
 
 export default function Sidebar() {
-    const { collapsed } = useSidebar();
+    const { collapsed, activeBar,setActiveBar } = useSidebar();
     const [sidebarWidth, setSidebarWidth] = useState(260)
     const isResizing = useRef(false);
     const router = useRouter();
@@ -85,7 +84,9 @@ export default function Sidebar() {
                 <nav className="flex flex-col gap-1">
                     {navItems.map((item) => (
                         <button
+                            
                             onClick={() => {
+                                setActiveBar(item.label)
                                 router.push(item.link)
                             }}
                             key={item.label}
@@ -93,7 +94,7 @@ export default function Sidebar() {
                             className={`
               flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
               ${collapsed ? "justify-center" : ""}
-              ${item.active
+              ${activeBar === item.label
                                     ? "bg-blue-500/10 text-blue-400"
                                     : "text-slate-400 hover:bg-slate-800 hover:text-white"
                                 }

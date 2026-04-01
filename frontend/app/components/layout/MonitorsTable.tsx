@@ -155,8 +155,15 @@ export const MonitorsTable = (
                     }
                     {pageNumbers.map((p) => (
                         <button
+                            onClick={() => {
+                                if (p === currentPage) {
+                                    return;
+                                }
+                                setCurrentPage(p)
+                            }}
+                            disabled={p === currentPage}
                             key={p}
-                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${p === 1
+                            className={`disabled:cursor-not-allowed px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${p === currentPage
                                 ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20"
                                 : "border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white"
                                 }`}
