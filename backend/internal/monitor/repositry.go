@@ -45,6 +45,7 @@ func (r *Repository) GetUserMonitor(
 			m.expected_status,
 			r.status_code AS current_status,
 			r.response_time_ms,
+			r.status,
 			r.checked_at AS last_checked
 		FROM monitors m
 		LEFT JOIN monitor_results r 

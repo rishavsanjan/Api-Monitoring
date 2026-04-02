@@ -105,15 +105,17 @@ export default function CreateMonitorPage() {
         mutationKey: ['monitor-add'],
         mutationFn: async () => {
             const config = {
-                "Headers": form.authorizationToken,
-                "RequestBody": form.requestBody,
-                "MustContain": form.keyword
+                "headers": {
+                    "Authorization": `Bearer ${form.authorizationToken}`
+                },
+                "requestBody": form.requestBody,
+                "mustContain": form.keyword
             }
             await api.post("/api/monitors", {
                 name: form.name,
                 URL: form.url,
                 interval: form.interval,
-                type: form.keyword,
+                type: form.type,
                 config: config
             })
         },

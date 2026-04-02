@@ -105,7 +105,7 @@ export const MonitorsTable = (
                                         </td>
                                         {/* Status */}
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <StatusBadge status={m.currentStatus === m.expectedStatus ? "online" : "offline"} />
+                                            <StatusBadge status={m.status === "UP" ? "online" : "offline"} />
                                         </td>
                                         {/* Response time */}
                                         <td className="px-6 py-4 whitespace-nowrap text-right">
