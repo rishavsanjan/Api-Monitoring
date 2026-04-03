@@ -112,7 +112,7 @@ func checkHttpMonitor(monitor models.Monitor, alertService *alert.Service) {
 
 type KeywordConfig struct {
 	Headers        map[string]string `json:"headers"`
-	Body           string            `json:"body"` // JSON string
+	Body           string            `json:"requestBody"` 
 	MustContain    []string          `json:"mustContain"`
 	MustNotContain []string          `json:"mustNotContain"`
 	UseRegex       bool              `json:"useRegex"`
@@ -237,10 +237,6 @@ func RunKeywordCheck(
 	return status, responseTime, statusCode, nil
 }
 
-// 🔹 helper
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
+
+
+

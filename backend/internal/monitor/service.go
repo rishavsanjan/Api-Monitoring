@@ -22,7 +22,7 @@ func (s *Service) UpdateMonitor(id string, input UpdateMonitorInput) error {
 	return s.repo.UpdateMonitor(id, input)
 }
 
-func (s *Service) CreateMonitor(userId string, name string, url string, monitorType string, config map[string]interface{}) error {
+func (s *Service) CreateMonitor(userId string, name string, url string, monitorType string, config map[string]interface{}, method string) error {
 	jsonConfig, err := json.Marshal(config)
 	if err != nil {
 		return err
@@ -32,7 +32,7 @@ func (s *Service) CreateMonitor(userId string, name string, url string, monitorT
 		UserId:         userId,
 		Name:           name,
 		URL:            url,
-		Method:         "GET",
+		Method:         method,
 		ExpectedStatus: 200,
 		Interval:       60,
 		CreatedAt:      time.Now(),

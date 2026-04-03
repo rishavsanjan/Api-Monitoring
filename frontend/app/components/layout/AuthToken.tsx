@@ -1,6 +1,13 @@
-import React from 'react'
+import { KeywordMonitorForm } from '@/type/props'
+import React, { SetStateAction } from 'react'
 
-const AuthToken = () => {
+interface Props {
+    token: string,
+    setForm: React.Dispatch<SetStateAction<KeywordMonitorForm>>
+}
+
+const AuthToken: React.FC<Props> = ({ token, setForm }) => {
+
     return (
         <div className="w-full max-w-6xl bg-[#111827] text-white  rounded-xl">
             <div className="mt-6 border-t border-slate-700 mb-4"></div>
@@ -33,6 +40,10 @@ const AuthToken = () => {
                         Token
                     </label>
                     <input
+                        value={token}
+                        onChange={(e) => {
+                            setForm(prev => ({ ...prev, authorizationToken: e.target.value }))
+                        }}
                         type="text"
                         placeholder="Paste your token here"
                         className={`

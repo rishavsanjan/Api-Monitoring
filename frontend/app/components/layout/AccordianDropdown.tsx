@@ -5,17 +5,17 @@ import { useRouter } from "next/navigation";
 
 const options = [
   {
-    id :1 ,
+    id: 1,
     title: "HTTP / website monitoring",
     desc: "Monitor your website or API endpoint using HTTP(S).",
   },
   {
-    id : 2,
+    id: 2,
     title: "Keyword monitoring",
     desc: "Check for specific text in response body.",
   },
   {
-    id : 3,
+    id: 3,
     title: "Ping monitoring",
     desc: "Ensure your server is always reachable.",
   },
@@ -40,7 +40,7 @@ export default function MonitorDropdown() {
 
   return (
     <div ref={dropdownRef} className="w-full max-w-2xl ">
-      
+
       {/* Selected Item */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -52,24 +52,25 @@ export default function MonitorDropdown() {
         </div>
 
         <ChevronDown
-          className={`transition-transform ${
-            isOpen ? "rotate-180" : ""
-          }`}
+          className={`transition-transform ${isOpen ? "rotate-180" : ""
+            }`}
         />
       </button>
 
       {/* Dropdown List */}
       {isOpen && (
-        <div  className="mt-2  bg-[#020617] border border-gray-800 rounded-xl overflow-hidden">
+        <div className="mt-2  bg-[#020617] border border-gray-800 rounded-xl overflow-hidden">
           {options.map((item, index) => (
             <div
               key={index}
               onClick={() => {
-                
-                if(index + 1 === 1){
+
+                if (index + 1 === 1) {
                   router.push('/http')
-                }else if(index + 1 === 2){
+                } else if (index + 1 === 2) {
                   router.push('/keyword');
+                } else if (index + 1 === 3) {
+                  router.push('/ping');
                 }
                 setSelected(item);
                 setIsOpen(false);

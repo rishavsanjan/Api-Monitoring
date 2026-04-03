@@ -23,6 +23,7 @@ type CreateMonitorRequest struct {
 	URL      string                 `json:"URL"`
 	Interval int                    `json:"interval"`
 	Type     string                 `json:"type"`
+	Method   string                 `json:"method"`
 	Config   map[string]interface{} `json:"config"`
 }
 
@@ -58,7 +59,7 @@ func (h *Handler) CreateMonitor(c *gin.Context) {
 
 	userId := c.GetString("user_id")
 
-	h.service.CreateMonitor(userId, req.Name, req.URL, req.Type, req.Config)
+	h.service.CreateMonitor(userId, req.Name, req.URL, req.Type, req.Config, req.Method)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "monitor created",

@@ -83,7 +83,7 @@ export default function CreateMonitorPage() {
         const e: typeof errors = {};
         if (!form.name.trim()) e.name = "Monitor name is required";
         if (!form.url.trim()) e.url = "URL is required";
-        if (!form.keyword.trim()) e.url = "Keyword is required";
+        if (form.keyword.length === 0) e.keyword = "Keyword is required";
         else if (!/^https?:\/\/.+/.test(form.url)) e.url = "Enter a valid URL starting with http:// or https://";
         if (!form.statusCode || form.statusCode < 100 || form.statusCode > 599)
             e.statusCode = "Enter a valid HTTP status code (100–599)";
@@ -104,19 +104,22 @@ export default function CreateMonitorPage() {
     const addMonitorMutation = useMutation({
         mutationKey: ['monitor-add'],
         mutationFn: async () => {
+            const keywords = form.keyword.split(",").map(item => item.trim()).filter(item => item.length > 0);
             const config = {
                 "headers": {
                     "Authorization": `Bearer ${form.authorizationToken}`
                 },
                 "requestBody": form.requestBody,
-                "mustContain": form.keyword
+                "mustContain": keywords || []
             }
+            console.log(config)
             await api.post("/api/monitors", {
                 name: form.name,
                 URL: form.url,
                 interval: form.interval,
                 type: form.type,
-                config: config
+                config: config,
+                method: form.method
             })
         },
         onMutate: async () => {
@@ -221,8 +224,8 @@ export default function CreateMonitorPage() {
 
                         <Input
                             label="Keyword to look for"
-                            placeholder="e.g. <span>Welcome</span> or products"
-                            description="The keyword must be present in the response HTML source. You can use HTML markup, too. For api add only the keyword"
+                            placeholder="e.g. success"
+                            description="The keyword must be present in the api response."
                             value={form.keyword}
                             onChange={(e) => setForm({ ...form, keyword: e.target.value })}
                             error={errors.keyword}
@@ -265,7 +268,7 @@ export default function CreateMonitorPage() {
 
 
                                 {/* Auth Token */}
-                                <AuthToken />
+                                <AuthToken setForm={setForm} token={form.authorizationToken} />
 
                                 <div className="flex flex-col space-y-4">
                                     <div>

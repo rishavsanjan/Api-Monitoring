@@ -85,3 +85,10 @@ export interface KeywordMonitorForm {
     type : string
 }
 
+export interface PingMonitorForm {
+    name: string;
+    url: string;
+    interval: number;
+    type : string
+}
+
