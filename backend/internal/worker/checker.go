@@ -9,9 +9,13 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os/exec"
 	"regexp"
+	"runtime"
+	"strconv"
 	"strings"
 	"time"
+
 )
 
 func RunMonitoringCycle() {
@@ -39,9 +43,7 @@ func RunMonitoringCycle() {
 			go checkHttpMonitor(monitor, alertService)
 		case "keyword":
 			go func(m models.Monitor) {
-				log.Println("checking :")
 				status, responseTime, statusCode, err := RunKeywordCheck(m, alertService)
-				log.Println(status, responseTime, statusCode, err)
 				if err != nil {
 					status = "DOWN"
 				}
@@ -59,6 +61,31 @@ func RunMonitoringCycle() {
 				msg, _ := json.Marshal(result)
 				ws.SendToUser(m.UserId, msg)
 
+			}(monitor)
+		case "ping":
+			go func(m models.Monitor) {
+				log.Println("checking ping : ")
+				status, latency, packetLoss, err := RunPingCheck(m, alertService)
+				log.Println("stats : ")
+				log.Println(status, latency, packetLoss, err)
+				if err != nil {
+					status = "DOWN"
+				}
+				statusCode := 500
+				if status == "UP" {
+					statusCode = 200
+				}
+				result := models.MonitorResult{
+					MonitorID:      m.ID,
+					Status:         status,
+					StatusCode:     statusCode,
+					ResponseTimeMs: int(latency),
+					CheckedAt:      time.Now(),
+					PacketLoss:     packetLoss,
+				}
+				database.DB.Create(&result)
+				msg, _ := json.Marshal(result)
+				ws.SendToUser(m.UserId, msg)
 			}(monitor)
 
 		}
@@ -108,11 +135,9 @@ func checkHttpMonitor(monitor models.Monitor, alertService *alert.Service) {
 
 }
 
-
-
 type KeywordConfig struct {
 	Headers        map[string]string `json:"headers"`
-	Body           string            `json:"requestBody"` 
+	Body           string            `json:"requestBody"`
 	MustContain    []string          `json:"mustContain"`
 	MustNotContain []string          `json:"mustNotContain"`
 	UseRegex       bool              `json:"useRegex"`
@@ -237,6 +262,120 @@ func RunKeywordCheck(
 	return status, responseTime, statusCode, nil
 }
 
+type PingConfig struct {
+	Host     string `json:"host"`
+	Attempts int    `json:"attempts"`
+}
 
+func RunPingCheck(
+	monitor models.Monitor,
+	alertService *alert.Service,
+) (string, int64, int, error) {
 
+	var cfg PingConfig
+	if err := json.Unmarshal(monitor.Config, &cfg); err != nil {
+		return "DOWN", 0, 0, err
+	}
 
+	// 🔹 Defaults
+	if cfg.Attempts == 0 {
+		cfg.Attempts = 5
+	}
+
+	host := cfg.Host
+	if host == "" {
+		host = monitor.URL
+	}
+
+	// 🔥 Clean host (remove https:// etc.)
+	host = strings.TrimPrefix(host, "https://")
+	host = strings.TrimPrefix(host, "http://")
+	host = strings.Split(host, "/")[0]
+
+	log.Println("System ping host:", host)
+
+	// 🔹 OS-specific command
+	var cmd *exec.Cmd
+
+	if runtime.GOOS == "windows" {
+		cmd = exec.Command("ping", "-n", strconv.Itoa(cfg.Attempts), host)
+	} else {
+		cmd = exec.Command("ping", "-c", strconv.Itoa(cfg.Attempts), host)
+	}
+
+	//start := time.Now()
+	output, err := cmd.CombinedOutput()
+	//duration := time.Since(start).Milliseconds()
+
+	if err != nil {
+		log.Println("ping command error:", err)
+	}
+
+	outStr := string(output)
+	log.Println("PING OUTPUT:\n", outStr)
+
+	// 🔍 Extract packet loss
+	packetLoss := extractPacketLoss(outStr)
+
+	// 🔍 Extract avg latency
+	avgLatency := extractAvgLatency(outStr)
+
+	status := "UP"
+
+	if packetLoss == 100 {
+		status = "DOWN"
+	} else if packetLoss > 50 {
+		status = "DOWN"
+	}
+
+	alertService.HandleStatusChange(monitor.ID, status)
+
+	log.Printf("Ping Result → Host: %s | Loss: %d%% | Avg Latency: %dms\n",
+		host, packetLoss, avgLatency)
+
+	return status, avgLatency, packetLoss, nil
+}
+
+func extractPacketLoss(output string) int {
+	// Windows: Lost = 0 (0% loss)
+	re := regexp.MustCompile(`\((\d+)% loss\)`)
+	match := re.FindStringSubmatch(output)
+
+	if len(match) >= 2 {
+		val, _ := strconv.Atoi(match[1])
+		return val
+	}
+
+	// Linux: 0% packet loss
+	re = regexp.MustCompile(`(\d+)% packet loss`)
+	match = re.FindStringSubmatch(output)
+
+	if len(match) >= 2 {
+		val, _ := strconv.Atoi(match[1])
+		return val
+	}
+
+	return 100
+}
+
+func extractAvgLatency(output string) int64 {
+	// Windows: Average = 23ms
+	re := regexp.MustCompile(`Average = (\d+)ms`)
+	match := re.FindStringSubmatch(output)
+
+	if len(match) >= 2 {
+		val, _ := strconv.ParseInt(match[1], 10, 64)
+		return val
+	}
+
+	// Linux: avg = 23.456 ms
+	re = regexp.MustCompile(`= [\d\.]+/([\d\.]+)/`)
+	match = re.FindStringSubmatch(output)
+
+	if len(match) >= 2 {
+		val, _ := strconv.ParseFloat(match[1], 64)
+		return int64(val)
+	}
+
+	return 0
+}

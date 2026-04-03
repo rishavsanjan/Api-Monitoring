@@ -78,7 +78,7 @@ export default function CreateMonitorPage() {
         if (!form.name.trim()) e.name = "Monitor name is required";
         if (!form.url.trim()) e.url = "URL is required";
         else if (!/^https?:\/\/.+/.test(form.url)) e.url = "Enter a valid URL starting with http:// or https://";
-        
+
         return e;
     };
 
@@ -89,18 +89,16 @@ export default function CreateMonitorPage() {
         addMonitorMutation.mutate();
     };
 
-    const methods = ["GET", "POST", "PUT"]
 
     const queryClient = useQueryClient();
 
     const addMonitorMutation = useMutation({
         mutationKey: ['monitor-add'],
         mutationFn: async () => {
-            const host = form.url.replace("https://","").replace("/","").concat(":80");
-            console.log(host)
-            return;
+
             const config = {
-                
+                "host": form.url,
+                "attempts": 5,
             }
             console.log(config)
             await api.post("/api/monitors", {
