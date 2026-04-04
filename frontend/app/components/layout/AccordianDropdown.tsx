@@ -19,6 +19,11 @@ const options = [
     title: "Ping monitoring",
     desc: "Ensure your server is always reachable.",
   },
+  {
+    id: 4,
+    title: "Synthetic monitoring",
+    desc: "Ensure multi step monitoring."
+  }
 ];
 
 export default function MonitorDropdown() {
@@ -71,6 +76,8 @@ export default function MonitorDropdown() {
                   router.push('/keyword');
                 } else if (index + 1 === 3) {
                   router.push('/ping');
+                } else if (index + 1 === 4) {
+                  router.push('/synthetic');
                 }
                 setSelected(item);
                 setIsOpen(false);
