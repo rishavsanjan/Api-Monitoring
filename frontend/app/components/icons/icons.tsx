@@ -249,6 +249,48 @@ export const IconLink = () => (
 );
 
 
+export const ChevronRightIcon = ({ className }: { className?: string }) => (
+    <svg
+        className={className}
+        width="14"
+        height="14"
+        viewBox="0 0 14 14"
+        fill="none"
+    >
+        <path
+            d="M5 3l4 4-4 4"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+    </svg>
+);
+
+export const PlusIcon = () => (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path
+            d="M7 2v10M2 7h10"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+        />
+    </svg>
+);
+
+export const CheckIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path
+            d="M4 10l4 4 8-8"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+    </svg>
+);
+
+
 
 
 
