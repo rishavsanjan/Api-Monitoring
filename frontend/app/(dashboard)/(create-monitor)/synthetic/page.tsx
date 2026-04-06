@@ -1,10 +1,13 @@
 "use client";
 
 import MonitorCard from "@/app/components/layout/MonitorCard";
+import api from "@/lib/axios";
 import { Editor } from "@monaco-editor/react";
 import { useMutation } from "@tanstack/react-query";
+import axios from "axios";
 import { CheckIcon, ChevronRightIcon, PlusIcon } from "lucide-react";
 import { useState, useCallback } from "react";
+import toast from "react-hot-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -63,8 +66,7 @@ export default function CreateMonitorPage() {
     const [monitors, setMonitors] = useState<MonitorForm[]>([createMonitor()]);
     const [interval, setIntervalMins] = useState<number>(5);
     const [errors, setErrors] = useState<FormErrors>({});
-    const [loading, setLoading] = useState(false);
-    const [success, setSuccess] = useState(false);
+    const [monitorName, setMonitorName] = useState("");
 
     // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -143,14 +145,31 @@ export default function CreateMonitorPage() {
                         mustContain: mustContainKeywords
                     },
                     extract: {
-                        variable: m.extract.variableName,
-                        path: path
+                        [m.extract.variableName]:path
+                        
+                        
                     }
                 }
             })
 
             console.log(config)
-            return
+
+            await api.post(`/api/monitors`, {
+                name: monitorName,
+                URL: monitors[0].url,
+                interval: interval * 60,
+                type: "synthetic",
+                config: {
+                    "steps": config
+                },
+                method: "GET"
+            })
+        },
+        onSuccess: async () => {
+            toast.success("Montoir created successfully!")
+        },
+        onError: async () => {
+            toast.error("Internal server error!")
         }
     })
 
@@ -161,55 +180,20 @@ export default function CreateMonitorPage() {
             return;
         }
         setErrors({});
-        setLoading(true);
         handleSubmissionMutation.mutate();
         return;
 
-        try {
-            await Promise.all(
-                monitors.map((m) =>
-                    fetch("/api/monitors", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            name: m.name,
-                            URL: m.url,
-                            interval: interval * 60,
-                            method: m.method,
-                            type: "keyword",
-                            config: {
-                                headers: m.token ? { Authorization: `Bearer ${m.token}` } : {},
-                                requestBody: m.body,
-                                mustContain: m.keyword
-                                    .split(",")
-                                    .map((k) => k.trim())
-                                    .filter(Boolean),
-                            },
-                        }),
-                    }).then((r) => {
-                        if (!r.ok) throw new Error("Request failed");
-                    })
-                )
-            );
-            setSuccess(true);
-        } catch {
-            // In a real app: toast.error("Failed to create monitor(s)");
-            alert("Failed to create monitor(s). Please try again.");
-        } finally {
-            setLoading(false);
-        }
     };
 
     const handleReset = () => {
         setMonitors([createMonitor()]);
         setIntervalMins(5);
-        setSuccess(false);
         setErrors({});
     };
 
     // ── Success state ─────────────────────────────────────────────────────────────
 
-    if (success) {
+    if (handleSubmissionMutation.isSuccess) {
         return (
             <div className="w-full py-12 px-4">
                 <div className="flex flex-col items-center gap-5 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-12 text-center">
@@ -243,11 +227,27 @@ export default function CreateMonitorPage() {
         );
     }
 
+
     // ── Main render ──────────────────────────────────────────────────────────────
 
     return (
         <div className="mx-auto  w-full py-8 px-4 space-y-5">
             <div className="mb-2">
+                <div className=" my-4 text-sm text-slate-400 mt-1">
+                    <h1 className="text-xl font-semibold text-white tracking-tight">
+                        Monitor Name
+                    </h1>
+                    <input
+                        onChange={(e) => {
+                            setMonitorName(e.target.value)
+                        }}
+                        placeholder="e.g. Website synthetic monitior"
+                        className={`w-full bg-slate-800/60 border rounded-lg px-3 py-2.5 text-sm text-slate-100 placeholder-slate-500 outline-none transition-all
+                        focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/60
+                        `}
+                    />
+                </div>
+
                 <h1 className="text-xl font-semibold text-white tracking-tight">
                     Create monitors
                 </h1>
@@ -255,6 +255,8 @@ export default function CreateMonitorPage() {
                     Monitor endpoints for uptime, latency, and keyword presence.
                 </p>
             </div>
+
+
 
             {/* Monitor cards */}
             {monitors.map((monitor, i) => (
@@ -308,11 +310,11 @@ export default function CreateMonitorPage() {
             <div className="flex items-center justify-end gap-3 pt-1">
                 <button
                     type="button"
-                    onClick={ () => {handleSubmit()}}
-                    disabled={loading}
+                    onClick={() => { handleSubmit() }}
+                    disabled={handleSubmissionMutation.isPending}
                     className="flex items-center gap-2 px-8 py-2.5 bg-blue-500 hover:bg-blue-400 disabled:bg-blue-500/50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-500/20 transition-all"
                 >
-                    {loading ? (
+                    {handleSubmissionMutation.isPending ? (
                         <>
                             <svg
                                 className="animate-spin w-4 h-4"
