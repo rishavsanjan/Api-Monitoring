@@ -144,16 +144,14 @@ export default function CreateMonitorPage() {
                         status: 200,
                         mustContain: mustContainKeywords
                     },
-                    extract: {
-                        [m.extract.variableName]:path
-                        
-                        
-                    }
+                    extract: m.extract ? {
+                        [m.extract.variableName]: path
+                    } : null
                 }
             })
 
             console.log(config)
-
+            return;
             await api.post(`/api/monitors`, {
                 name: monitorName,
                 URL: monitors[0].url,

@@ -6,6 +6,8 @@ import (
 	"api-monitoring-saas/internal/models"
 	"api-monitoring-saas/internal/ws"
 	"encoding/json"
+	"fmt"
+	"github.com/PaesslerAG/jsonpath"
 	"io"
 	"log"
 	"net/http"
@@ -15,7 +17,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
 )
 
 func RunMonitoringCycle() {
@@ -87,7 +88,26 @@ func RunMonitoringCycle() {
 				msg, _ := json.Marshal(result)
 				ws.SendToUser(m.UserId, msg)
 			}(monitor)
+		case "synthetic":
+			go func(m models.Monitor) {
+				var config MonitorConfig
 
+				fmt.Println("synthetic is running :")
+
+				err := json.Unmarshal(m.Config, &config)
+				if err != nil {
+					log.Println("❌ Failed to parse config:", err)
+					return
+				}
+
+				// ✅ debug
+				log.Println("Parsed steps:", len(config.Steps))
+
+				err = RunSyntheticMonitor(config)
+				if err != nil {
+					log.Println("❌ Synthetic monitor failed:", err)
+				}
+			}(monitor)
 		}
 
 	}
@@ -378,4 +398,158 @@ func extractAvgLatency(output string) int64 {
 	}
 
 	return 0
+}
+
+type MonitorConfig struct {
+	Steps []Step `json:"steps"`
+}
+
+type Step struct {
+	Name       string            `json:"name"`
+	Request    RequestConfig     `json:"request"`
+	Assertions AssertionConfig   `json:"assertions"`
+	Extract    map[string]string `json:"extract"` // variableName -> JSONPath
+}
+
+type RequestConfig struct {
+	URL     string            `json:"url"`
+	Method  string            `json:"method"`
+	Headers map[string]string `json:"headers"`
+	Body    string            `json:"body"`
+}
+
+type AssertionConfig struct {
+	Status      int      `json:"status"`
+	MustContain []string `json:"mustContain"`
+}
+
+func RunSyntheticMonitor(config MonitorConfig) error {
+	variables := make(map[string]string)
+	client := &http.Client{Timeout: 10 * time.Second}
+
+	for _, step := range config.Steps {
+		log.Println("Running step:", step.Name)
+		// 🔁 Replace variables in request
+		reqConfig := replaceVariables(step.Request, variables)
+
+		// 📦 Build request
+		req, err := buildRequest(reqConfig)
+		if err != nil {
+			return fmt.Errorf("step %s: request build failed: %v", step.Name, err)
+		}
+
+		// 🚀 Execute
+		start := time.Now()
+		resp, err := client.Do(req)
+		duration := time.Since(start)
+
+		if err != nil {
+			return fmt.Errorf("step %s: request failed: %v", step.Name, err)
+		}
+		defer resp.Body.Close()
+
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		bodyStr := string(bodyBytes)
+
+		// ✅ Assertions
+		if err := validateAssertions(step.Assertions, resp.StatusCode, bodyStr); err != nil {
+			return fmt.Errorf("step %s failed: %v", step.Name, err)
+		}
+
+		// 🔍 Extract variables
+		if len(step.Extract) > 0 {
+			if err := extractVariables(step.Extract, bodyBytes, variables); err != nil {
+				return fmt.Errorf("step %s extract failed: %v", step.Name, err)
+			}
+		}
+
+		log.Printf("✅ Step %s passed (%v)", step.Name, duration)
+	}
+
+	return nil
+}
+
+func buildRequest(cfg RequestConfig) (*http.Request, error) {
+	var body io.Reader
+
+	// if cfg.Body != nil {
+	// 	jsonBody, _ := json.Marshal(cfg.Body)
+	// 	body = bytes.NewBuffer(jsonBody)
+	// }
+
+	if cfg.Body != "" {
+		body = strings.NewReader(cfg.Body)
+	}
+
+	req, err := http.NewRequest(cfg.Method, cfg.URL, body)
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range cfg.Headers {
+		req.Header.Set(k, v)
+	}
+
+	if cfg.Body != "" {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	return req, nil
+}
+
+func replaceVariables(req RequestConfig, vars map[string]string) RequestConfig {
+
+	replace := func(input string) string {
+		for k, v := range vars {
+			input = strings.ReplaceAll(input, "{{"+k+"}}", v)
+		}
+		return input
+	}
+
+	req.URL = replace(req.URL)
+
+	for k, v := range req.Headers {
+		req.Headers[k] = replace(v)
+	}
+
+	// ✅ FIXED
+	if req.Body != "" {
+		req.Body = replace(req.Body)
+	}
+
+	return req
+}
+
+func validateAssertions(assert AssertionConfig, status int, body string) error {
+
+	if assert.Status != 0 && status != assert.Status {
+		return fmt.Errorf("expected status %d, got %d", assert.Status, status)
+	}
+
+	for _, keyword := range assert.MustContain {
+		if !strings.Contains(body, keyword) {
+			return fmt.Errorf("missing keyword: %s", keyword)
+		}
+	}
+
+	return nil
+}
+
+func extractVariables(extract map[string]string, body []byte, vars map[string]string) error {
+
+	var jsonData interface{}
+	if err := json.Unmarshal(body, &jsonData); err != nil {
+		return err
+	}
+
+	for key, path := range extract {
+		value, err := jsonpath.Get(path, jsonData)
+		if err != nil {
+			return fmt.Errorf("failed to extract %s: %v", key, err)
+		}
+
+		vars[key] = fmt.Sprintf("%v", value)
+	}
+
+	return nil
 }
