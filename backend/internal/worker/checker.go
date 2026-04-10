@@ -96,17 +96,30 @@ func RunMonitoringCycle() {
 
 				err := json.Unmarshal(m.Config, &config)
 				if err != nil {
-					log.Println("❌ Failed to parse config:", err)
+					log.Println("Failed to parse config:", err)
 					return
 				}
 
-				// ✅ debug
 				log.Println("Parsed steps:", len(config.Steps))
+				status := "DOWN"
+				var responseTime int64
 
-				err = RunSyntheticMonitor(config)
+				status, responseTime, err = RunSyntheticMonitor(config)
+				log.Println(status, responseTime, err)
 				if err != nil {
-					log.Println("❌ Synthetic monitor failed:", err)
+					log.Println("Synthetic monitor failed:", err)
 				}
+				result := models.MonitorResult{
+					MonitorID:      m.ID,
+					Status:         status,
+					StatusCode:     200,
+					ResponseTimeMs: int(responseTime),
+					CheckedAt:      time.Now(),
+				}
+				database.DB.Create(&result)
+				msg, _ := json.Marshal(result)
+				ws.SendToUser(m.UserId, msg)
+
 			}(monitor)
 		}
 
@@ -423,59 +436,59 @@ type AssertionConfig struct {
 	MustContain []string `json:"mustContain"`
 }
 
-func RunSyntheticMonitor(config MonitorConfig) error {
+func RunSyntheticMonitor(config MonitorConfig) (string, int64, error) {
 	variables := make(map[string]string)
 	client := &http.Client{Timeout: 10 * time.Second}
-
+	start := time.Now()
 	for _, step := range config.Steps {
 		log.Println("Running step:", step.Name)
-		// 🔁 Replace variables in request
+		// Replace variables in request
 		reqConfig := replaceVariables(step.Request, variables)
 
-		// 📦 Build request
+		// Build request
 		req, err := buildRequest(reqConfig)
 		if err != nil {
-			return fmt.Errorf("step %s: request build failed: %v", step.Name, err)
+			fmt.Errorf("step %s: request build failed: %v", step.Name, err)
+			return "DOWN", 0, err
 		}
 
-		// 🚀 Execute
-		start := time.Now()
+		// Execute
+		s := time.Now()
 		resp, err := client.Do(req)
-		duration := time.Since(start)
+		d := time.Since(s)
 
 		if err != nil {
-			return fmt.Errorf("step %s: request failed: %v", step.Name, err)
+			fmt.Errorf("step %s: request failed: %v", step.Name, err)
+			return "DOWN", 0, err
 		}
 		defer resp.Body.Close()
 
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		bodyStr := string(bodyBytes)
 
-		// ✅ Assertions
+		//  Assertions
 		if err := validateAssertions(step.Assertions, resp.StatusCode, bodyStr); err != nil {
-			return fmt.Errorf("step %s failed: %v", step.Name, err)
+			fmt.Errorf("step %s failed: %v", step.Name, err)
+			return "DOWN", 0, err
 		}
 
-		// 🔍 Extract variables
+		// Extract variables
 		if len(step.Extract) > 0 {
 			if err := extractVariables(step.Extract, bodyBytes, variables); err != nil {
-				return fmt.Errorf("step %s extract failed: %v", step.Name, err)
+				fmt.Errorf("step %s extract failed: %v", step.Name, err)
+				return "DOWN", 0, err
 			}
 		}
 
-		log.Printf("✅ Step %s passed (%v)", step.Name, duration)
+		log.Printf("Step %s time %v", step.Name, d)
 	}
-
-	return nil
+	responseTime := time.Since(start).Milliseconds()
+	fmt.Println("total time : ", responseTime)
+	return "UP", responseTime, nil
 }
 
 func buildRequest(cfg RequestConfig) (*http.Request, error) {
 	var body io.Reader
-
-	// if cfg.Body != nil {
-	// 	jsonBody, _ := json.Marshal(cfg.Body)
-	// 	body = bytes.NewBuffer(jsonBody)
-	// }
 
 	if cfg.Body != "" {
 		body = strings.NewReader(cfg.Body)
