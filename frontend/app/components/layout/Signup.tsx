@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { IconArrowRight, IconCheck, IconEye, IconLock, IconMail, IconUser } from "../icons/icons";
 import { InputFieldProps, SignupForm } from "@/type/props";
+import { useMutation } from "@tanstack/react-query";
+import api from "@/lib/axios";
+import axios, { AxiosError } from "axios";
+import toast from "react-hot-toast";
+
+type AuthErrorResponse = {
+    error: string;
+};
 const getPasswordStrength = (password: string): { score: number; label: string; color: string } => {
     let score = 0;
     if (password.length >= 8) score++;
@@ -58,8 +66,6 @@ const SignupPage = ({ onSwitch }: { onSwitch: () => void }) => {
     const [showPw, setShowPw] = useState(false);
     const [showCp, setShowCp] = useState(false);
     const [errors, setErrors] = useState<Partial<Record<keyof SignupForm, string>>>({});
-    const [loading, setLoading] = useState(false);
-    const [success, setSuccess] = useState(false);
 
     const strength = getPasswordStrength(form.password);
 
@@ -76,15 +82,33 @@ const SignupPage = ({ onSwitch }: { onSwitch: () => void }) => {
         return e;
     };
 
+    const signupMutation = useMutation({
+        mutationKey: ['register'],
+        mutationFn: async () => {
+            const res = await axios({
+                url: `http://localhost:8080/api/register`,
+                method: 'post',
+                data: {
+                    email: form.email,
+                    password: form.password,
+                }
+            })
+
+            return res.data
+        },
+        onError: async (error: AxiosError<AuthErrorResponse>) => {
+            toast.error(error.response!.data.error)
+        }
+
+    })
+
     const handleSubmit = async (ev: React.FormEvent) => {
         ev.preventDefault();
         const e = validate();
         if (Object.keys(e).length) { setErrors(e); return; }
         setErrors({});
-        setLoading(true);
-        await new Promise((r) => setTimeout(r, 1400));
-        setLoading(false);
-        setSuccess(true);
+        signupMutation.mutate();
+
     };
 
     return (
@@ -97,7 +121,7 @@ const SignupPage = ({ onSwitch }: { onSwitch: () => void }) => {
 
             {/* Card */}
             <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-8 shadow-2xl backdrop-blur-sm">
-                {success ? (
+                {signupMutation.isSuccess ? (
                     <div className="flex flex-col items-center gap-4 py-6 text-center">
                         <div className="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
                             <svg viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth={2.5} className="w-7 h-7">
@@ -232,10 +256,10 @@ const SignupPage = ({ onSwitch }: { onSwitch: () => void }) => {
 
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={signupMutation.isPending}
                             className="w-full bg-blue-500 hover:bg-blue-400 disabled:bg-blue-500/50 text-white font-semibold py-3 rounded-lg transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 group"
                         >
-                            {loading ? (
+                            {signupMutation.isPending ? (
                                 <span className="flex items-center gap-2">
                                     <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />

@@ -22,10 +22,12 @@ func NewService(repo *Repository) *Service {
 
 func (s *Service) Register(email string, password string) error {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), 10);
-
+	
 	if err != nil {
 		return err
 	}
+
+
 
 	user := models.User{
 		ID: uuid.New().String(),
