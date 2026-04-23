@@ -18,6 +18,10 @@ func NewService(repo *Repository) *Service {
 	}
 }
 
+func (s *Service) RunMonitorNow(id string) error {
+	return  s.repo.RunMonitorNow(id)
+}
+
 func (s *Service) UpdateMonitor(id string, input UpdateMonitorInput) error {
 	return s.repo.UpdateMonitor(id, input)
 }

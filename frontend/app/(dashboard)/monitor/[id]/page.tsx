@@ -1,15 +1,15 @@
 "use client";
 
-import { IconAnalytics, IconBell, IconChevronRight, IconDashboard, IconEdit, IconIncidents, IconMonitors, IconPlay, IconSearch, IconSettings, IconTrendDown, IconTrendUp, IconUser } from "@/app/components/icons/icons";
-import { AddMonitorModal } from "@/app/components/layout/AddReportModal";
+import { IconChevronRight, IconEdit, IconPlay, IconTrendDown, IconTrendUp } from "@/app/components/icons/icons";
 import { EditMonitorModal } from "@/app/components/layout/EditReportModal";
 import HistoryTable from "@/app/components/layout/HistoryTable";
 import PerformanceChart from "@/charts/PerformanceChart";
 import api from "@/lib/axios";
-import { Monitor, MonitorHistory, MonitorPageResponse } from "@/type/props";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { MonitorHistory, MonitorPageResponse } from "@/type/props";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Axios, AxiosError } from "axios";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { ClipLoader } from "react-spinners";
 
@@ -42,6 +42,10 @@ const StatCard = ({ label, value, delta, deltaPositive }: StatCardProps) => (
 );
 
 
+type AxiosErrorResposne = {
+    error: string
+}
+
 
 function getTimeFromISO(isoString: string): string {
     const date = new Date(isoString);
@@ -53,6 +57,7 @@ function getTimeFromISO(isoString: string): string {
 
 export default function MonitorDetailPage() {
     const [showModal, setShowModal] = useState(false);
+    const [checkingNow, setCheckingNow] = useState(false);
     const router = useRouter();
     const params = useParams();
     const id = params.id as string;
@@ -61,7 +66,6 @@ export default function MonitorDetailPage() {
         queryKey: ['monitor-result', id],
         queryFn: async () => {
             const response = await api.get(`/api/monitors/${id}/results`)
-            console.log(response.data)
             return response.data as MonitorPageResponse
         }
     })
@@ -109,7 +113,7 @@ export default function MonitorDetailPage() {
                     };
                 }
             );
-
+            setCheckingNow(false)
 
 
 
@@ -120,12 +124,26 @@ export default function MonitorDetailPage() {
         };
     }, []);
 
+    const handleRunCheckNowMutation = useMutation({
+        mutationKey: ['runchecknow', id],
+        mutationFn: async () => {
+            const res = await api.get(`/api/monitors/${id}`)
+            return res.data
+        },
+        onSuccess: async () => {
+            setCheckingNow(true)
+        },
+        onError: async (error: AxiosError<AxiosErrorResposne>) => {
+            toast.error(error.response!.data.error)
+        }
+    })
+
 
 
     if (!data) {
         return (
             <div className="bg-[#101722] h-full items-center flex justify-center text-white">
-                <ClipLoader color="white" size={50}/>
+                <ClipLoader color="white" size={50} />
             </div>
         )
 
@@ -173,9 +191,31 @@ export default function MonitorDetailPage() {
                                     <IconEdit />
                                     Edit Monitor
                                 </button>
-                                <button className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-blue-500/20">
-                                    <IconPlay />
-                                    Run Check Now
+                                <button
+                                    onClick={() => {
+                                        handleRunCheckNowMutation.mutate()
+                                    }}
+                                    disabled={checkingNow}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-blue-500/20 disabled:opacity-75 disabled:cursor-not-allowed">
+                                    {
+                                        checkingNow ?
+                                            <>
+                                                <ClipLoader color="white" size={20}/>
+                                            </>
+                                            :
+                                            <>
+                                                <IconPlay />
+                                            </>
+
+                                    }
+
+                                    {
+                                        checkingNow ?
+                                            'Running Check'
+                                            :
+                                            'Run Check Now'
+                                    }
+
                                 </button>
                             </div>
                         </div>

@@ -33,6 +33,27 @@ type UpdateMonitorInput struct {
 	Interval *int    `json:"interval"`
 }
 
+func (h *Handler) RunMonitorNow(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		return
+	}
+
+	err := h.service.RunMonitorNow(id)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "monitor scheduled successfully",
+	})
+
+}
+
 func (h *Handler) UpdateMonitor(c *gin.Context) {
 	var req UpdateMonitorInput
 	id := c.Param("id")

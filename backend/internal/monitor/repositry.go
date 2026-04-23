@@ -3,12 +3,34 @@ package monitor
 import (
 	"api-monitoring-saas/internal/database"
 	"api-monitoring-saas/internal/models"
+	"fmt"
+	"time"
 )
 
 type Repository struct{}
 
 func NewRepository() *Repository {
 	return &Repository{}
+}
+
+func (r *Repository) RunMonitorNow(id string) error {
+	var monitor models.Monitor
+	err := database.DB.Where("id = ?", id).First(&monitor).Error
+
+	if err != nil {
+		return fmt.Errorf("Monitor not found")
+	}
+
+	err = database.DB.Model(&models.Monitor{}).
+		Where("id = ?", monitor.ID).
+		Update("next_run", time.Now()).Error
+
+	if err != nil {
+		return fmt.Errorf("Unable to update the next run")
+	}
+
+	return nil
+
 }
 
 func (r *Repository) CreateMonitor(monitor *models.Monitor) error {
@@ -196,6 +218,3 @@ func (r *Repository) GetMonitorHistory(userId string, page int, monitorId string
 
 	return results, nil
 }
-
-
-
