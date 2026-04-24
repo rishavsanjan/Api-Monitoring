@@ -53,6 +53,7 @@ func SetupRouter() *gin.Engine {
 		protected.PATCH("/monitors/:id/update", monitorHandler.UpdateMonitor)
 		protected.GET("/monitors/:id/history", monitorHandler.GetMonitorHistory)
 		protected.GET("/monitors/:id", monitorHandler.RunMonitorNow)
+		protected.GET("/me", authHandler.VerifyUserToken)
 	}
 
 	protected.GET("/monitors/:id/results", analyticsHandler.GetResults)

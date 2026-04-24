@@ -37,3 +37,15 @@ func (r *Repository) GetUserByEmail(email string) (*models.User, error) {
 
 	return &user, err
 }
+
+func (r *Repository) VerifyUserToken(userId string) (*models.User, error) {
+	var user models.User
+
+	err := database.DB.Select("name", "email").Where("id = ?", userId).First(&user).Error
+
+	if err != nil {
+		return &user, err
+	}
+
+	return &user, nil
+}

@@ -4,6 +4,7 @@ import "./globals.css";
 import QueryProvider from "@/providers/QueryProvider";
 import { Toaster } from "react-hot-toast";
 import LoginSuccessToast from "@/toast/LoginSuccessToast";
+import { UserProvider } from "@/context/UserContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,10 +31,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+
         <QueryProvider>
-          <LoginSuccessToast/>
-          <Toaster position="top-right"/>
-          {children}
+          <UserProvider>
+            <LoginSuccessToast />
+            <Toaster position="top-right" />
+            {children}
+          </UserProvider>
+
         </QueryProvider>
 
       </body>

@@ -20,19 +20,18 @@ func NewService(repo *Repository) *Service {
 	}
 }
 
-func (s *Service) Register(email string, password string) error {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), 10);
-	
+func (s *Service) Register(email string, password string, name string) error {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+
 	if err != nil {
 		return err
 	}
 
-
-
 	user := models.User{
-		ID: uuid.New().String(),
-		Email: email,
-		Password: string(hash),
+		ID:        uuid.New().String(),
+		Name:      name,
+		Email:     email,
+		Password:  string(hash),
 		CreatedAt: time.Now(),
 	}
 
@@ -40,16 +39,16 @@ func (s *Service) Register(email string, password string) error {
 }
 
 func (s *Service) Login(email string, password string) (string, error) {
-	user , err := s.repo.GetUserByEmail(email)
+	user, err := s.repo.GetUserByEmail(email)
 
 	if err != nil {
 		return "", err
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password));
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 
 	if err != nil {
-		return  "wrong password", err
+		return "wrong password", err
 	}
 
 	token, err := GenerateToken(user.ID)
@@ -58,7 +57,7 @@ func (s *Service) Login(email string, password string) (string, error) {
 		return "", err
 	}
 
-	return  token, nil
+	return token, nil
 
 }
 
@@ -72,4 +71,8 @@ func GenerateToken(userID string) (string, error) {
 	})
 
 	return token.SignedString(secret)
+}
+
+func (h *Service) VerifyUserToken(userId string) (*models.User, error) {
+	return h.repo.VerifyUserToken(userId)
 }

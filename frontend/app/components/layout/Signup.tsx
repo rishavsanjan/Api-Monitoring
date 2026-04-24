@@ -91,6 +91,7 @@ const SignupPage = ({ onSwitch }: { onSwitch: () => void }) => {
                 data: {
                     email: form.email,
                     password: form.password,
+                    name: form.name
                 }
             })
 

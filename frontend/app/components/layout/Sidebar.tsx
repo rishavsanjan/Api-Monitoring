@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { IconDashboard, IconIncidents, IconMonitors, IconPlus, IconPulse, IconReports, IconSettings } from "../icons/icons";
 import { useSidebar } from "@/context/SidebarContext";
 import { useRouter } from "next/navigation";
+import { useUser } from "@/context/UserContext";
 
 type NavItem = {
     label: string;
@@ -19,9 +20,12 @@ const navItems: NavItem[] = [
 ];
 
 export default function Sidebar() {
-    const { collapsed, activeBar,setActiveBar } = useSidebar();
+    const { collapsed, activeBar, setActiveBar } = useSidebar();
     const [sidebarWidth, setSidebarWidth] = useState(260)
     const isResizing = useRef(false);
+
+    const { user } = useUser();
+
     const router = useRouter();
     const startResizing = () => {
         isResizing.current = true
@@ -68,12 +72,17 @@ export default function Sidebar() {
             />
             <div className={collapsed ? "px-3" : "px-6"}>
                 {/* Brand */}
-                <div className={`flex items-center gap-3 mb-10 ${collapsed ? "justify-center" : ""}`}>
+                <div
+                    onClick={() => {
+                        router.push('/dashboard')
+                    }}
+                    className={`flex items-center cursor-pointer gap-3 mb-10 ${collapsed ? "justify-center" : ""}`}>
                     <div className="bg-blue-500/20 p-2 rounded-lg shrink-0 text-blue-400">
                         <IconPulse />
                     </div>
                     {!collapsed && (
                         <div className="flex flex-col leading-none">
+
                             <span className="text-white text-base font-bold">UptimePulse</span>
                             <span className="text-slate-500 text-xs font-medium mt-0.5">Monitoring Pro</span>
                         </div>
@@ -84,7 +93,7 @@ export default function Sidebar() {
                 <nav className="flex flex-col gap-1">
                     {navItems.map((item) => (
                         <button
-                            
+
                             onClick={() => {
                                 setActiveBar(item.label)
                                 router.push(item.link)
@@ -113,11 +122,11 @@ export default function Sidebar() {
                 <div className="px-6 pt-6 border-t border-slate-800">
                     <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-violet-500 flex-shrink-0 flex items-center justify-center text-white text-sm font-bold">
-                            AR
+                            {user?.name[0].toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-white truncate">Alex Rivera</p>
-                            <p className="text-xs text-slate-500 truncate">Admin</p>
+                            <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
+                            <p className="text-xs text-slate-500 truncate">{user?.email}</p>
                         </div>
                     </div>
                 </div>

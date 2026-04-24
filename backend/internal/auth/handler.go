@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"api-monitoring-saas/internal/models"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -18,18 +19,19 @@ func NewHandler(service *Service) *Handler {
 
 type RegisterRequest struct {
 	Email    string `json:"email"`
+	Name     string `json:"name"`
 	Password string `json:"password"`
 }
 
-func (h *Handler) Register(c *gin.Context){
+func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error" : "invalid data"})
-		return;
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid data"})
+		return
 	}
 
-	err := h.service.Register(req.Email, req.Password)
+	err := h.service.Register(req.Email, req.Password, req.Name)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -46,28 +48,55 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
-func (h *Handler) Login(c *gin.Context){
+func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error" : "invalid data"})
-		return;
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid data"})
+		return
 	}
-	
-	token , err := h.service.Login(req.Email, req.Password);
+
+	token, err := h.service.Login(req.Email, req.Password)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-			"success":false,
+			"error":   err.Error(),
+			"success": false,
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"success":true,
-		"token" : token,
+		"success": true,
+		"token":   token,
 	})
 }
 
+func (h *Handler) VerifyUserToken(c *gin.Context) {
+	userID := c.GetString("user_id")
 
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "user not authorized",
+		})
+	}
+	var user *models.User
+	user, err := h.service.VerifyUserToken(userID)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"user": gin.H{
+			"name":  user.Name,
+			"email": user.Email,
+		},
+	})
+
+}
