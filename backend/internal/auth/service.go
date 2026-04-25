@@ -61,6 +61,10 @@ func (s *Service) Login(email string, password string) (string, error) {
 
 }
 
+func (s *Service) VerifyEmail(userId string) error {
+	return  s.VerifyEmail(userId)
+}
+
 func GenerateToken(userID string) (string, error) {
 
 	secret := []byte(os.Getenv("JWT_SECRET"))

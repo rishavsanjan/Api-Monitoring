@@ -100,3 +100,27 @@ func (h *Handler) VerifyUserToken(c *gin.Context) {
 	})
 
 }
+
+func (h *Handler) VerifyEmail(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "user not authorized",
+		})
+	}
+
+	err := h.service.VerifyEmail(userID)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+	})
+
+}

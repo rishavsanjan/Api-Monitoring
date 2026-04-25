@@ -31,6 +31,7 @@ func migrate() {
 		&models.Monitor{},
 		&models.MonitorResult{},
 		&models.Alert{},
+		&models.OTP{},
 	)
 
 	if err != nil {
