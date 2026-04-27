@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useRef, useState } from "react";
-import { IconDashboard, IconIncidents, IconMonitors, IconPlus, IconPulse, IconReports, IconSettings } from "../icons/icons";
+import { IconDashboard, IconIncidents, IconMonitors, IconPlus, IconPulse, IconReports, IconSettings, IconUser } from "../icons/icons";
 import { useSidebar } from "@/context/SidebarContext";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
@@ -16,6 +16,7 @@ const navItems: NavItem[] = [
     { label: "Monitors", icon: <IconMonitors />, link: '/dashboard' },
     { label: "Incidents", icon: <IconIncidents />, link: '/dashboard/create-monitor' },
     { label: "Create", icon: <IconPlus />, link: '/http' },
+    { label: "Profile", icon: <IconUser />, link: '/profile' },
     { label: "Settings", icon: <IconSettings />, link: '/create-monitor' },
 ];
 

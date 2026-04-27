@@ -1,3 +1,4 @@
+"use client"
 import { useState, useRef, KeyboardEvent, ClipboardEvent, useEffect } from "react";
 
 const DIGIT_COUNT = 6;
