@@ -45,7 +45,7 @@ func (r *Repository) GetUserByEmail(email string) (*models.User, error) {
 func (r *Repository) VerifyUserToken(userId string) (*models.User, error) {
 	var user models.User
 
-	err := database.DB.Select("name", "email").Where("id = ?", userId).First(&user).Error
+	err := database.DB.Select("name", "email", "is_verified").Where("id = ?", userId).First(&user).Error
 
 	if err != nil {
 		return &user, err

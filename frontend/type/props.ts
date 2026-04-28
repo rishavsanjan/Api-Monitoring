@@ -94,6 +94,7 @@ export interface PingMonitorForm {
 
 export interface User {
     name : string,
-    email:string
+    email:string,
+    isVerified:boolean
 }
 

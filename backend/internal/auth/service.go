@@ -62,7 +62,7 @@ func (s *Service) Login(email string, password string) (string, error) {
 }
 
 func (s *Service) VerifyEmail(userId string) error {
-	return  s.VerifyEmail(userId)
+	return  s.repo.VerifyEmail(userId)
 }
 
 func GenerateToken(userID string) (string, error) {

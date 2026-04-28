@@ -2,8 +2,14 @@
 import NotificationsTab from "@/app/components/layout/NotificationsTab";
 import SecurityTab from "@/app/components/layout/SecurityTab";
 import { useUser } from "@/context/UserContext";
+import api from "@/lib/axios";
 import { User } from "@/type/props";
+import { useMutation } from "@tanstack/react-query";
+import axios, { Axios, AxiosError } from "axios";
+import { ShieldCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { JSX, useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { ClipLoader } from "react-spinners";
 
 type Tab = "profile" | "notifications" | "security";
@@ -12,13 +18,14 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("profile");
   const [saved, setSaved] = useState(false);
   const { user, isFetchingUser } = useUser();
-
+  const router = useRouter();
 
   const [profile, setProfile] = useState<User>({
-    name: "",
+    name: "Fetching",
     email: "",
+    isVerified: false
   });
-
+  console.log(profile)
   useEffect(() => {
 
     const getProfile = async () => {
@@ -26,6 +33,7 @@ export default function SettingsPage() {
         setProfile({
           name: user.name ?? "",
           email: user.email ?? "",
+          isVerified: user.isVerified ?? false
         });
       }
     }
@@ -33,6 +41,27 @@ export default function SettingsPage() {
     getProfile();
 
   }, [user]);
+
+  const sendOtpMutation = useMutation({
+    mutationKey: ['otp'],
+    mutationFn: async () => {
+      const res = await api.get(`/api/send-otp`);
+
+      return res.data
+    },
+    onSuccess: async () => {
+      toast.success('Otp sent successfully!');
+
+      setTimeout(() => {
+        router.push('/verification');
+      }, 200);
+    },
+    onError: async (error:AxiosError<{error:string}>) => {
+      console.log(error.response?.data)
+      toast.error("Error sending OTP!")
+    }
+  })
+
 
   if (isFetchingUser) {
     return <ClipLoader color="white" />;
@@ -42,6 +71,7 @@ export default function SettingsPage() {
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
+
 
 
 
@@ -147,16 +177,31 @@ export default function SettingsPage() {
                           </button>
                         </div>
                         <div>
-                          <h4 className="font-semibold mb-1 text-sm">Your Avatar</h4>
-                          <p className="text-xs text-slate-500 mb-3">PNG or JPG, max 5MB.</p>
+                          <div className="flex flex-row items-center space-x-2 ">
+                            <h4 className="font-semibold mb-1 text-sm">{profile.name}</h4>
+                            <ShieldCheck color={`${profile.isVerified ? 'blue' : 'gray'} `} size={20} />
+                          </div>
+
+                          {/* <p className="text-xs text-slate-500 mb-3">PNG or JPG, max 5MB.</p>
                           <div className="flex gap-2">
                             <button className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
                               Upload New
                             </button>
                             <button className="px-4 py-2 text-red-500 text-xs font-bold hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
                               Remove
-                            </button>
-                          </div>
+                            </button> 
+                          </div>*/}
+                          {
+                            profile.isVerified ?
+                              <span className="text-gray-500 text-sm">Verified</span>
+                              :
+                              <button
+                                onClick={() => { sendOtpMutation.mutate() }}
+                                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                                Verify Now
+                              </button>
+                          }
+
                         </div>
                       </div>
 

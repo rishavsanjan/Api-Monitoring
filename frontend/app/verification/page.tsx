@@ -1,4 +1,5 @@
 "use client"
+import { useUser } from "@/context/UserContext";
 import { useState, useRef, KeyboardEvent, ClipboardEvent, useEffect } from "react";
 
 const DIGIT_COUNT = 6;
@@ -10,7 +11,7 @@ export default function OtpVerification() {
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [shake, setShake] = useState<boolean>(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-
+  const {user} = useUser();
   useEffect(() => {
     inputRefs.current[0]?.focus();
   }, []);
@@ -143,7 +144,7 @@ export default function OtpVerification() {
                 </h1>
                 <p className="text-slate-400 text-sm leading-relaxed max-w-[320px] mx-auto">
                   We've sent a 6-digit verification code to{" "}
-                  <span className="text-slate-200 font-semibold">alex@example.com</span>
+                  <span className="text-slate-200 font-semibold">{user?.email}</span>
                 </p>
               </div>
 

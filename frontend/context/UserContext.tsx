@@ -15,6 +15,7 @@ const UserContext = createContext<UserContext | null>(null)
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const[isFetchingUser, setIsFetchingUser] = useState(true)
+    console.log(user)
     useEffect(() => {
 
 

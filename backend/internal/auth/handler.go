@@ -96,6 +96,7 @@ func (h *Handler) VerifyUserToken(c *gin.Context) {
 		"user": gin.H{
 			"name":  user.Name,
 			"email": user.Email,
+			"isVerified":user.IsVerified,
 		},
 	})
 
