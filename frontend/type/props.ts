@@ -92,3 +92,8 @@ export interface PingMonitorForm {
     type : string
 }
 
+export interface User {
+    name : string,
+    email:string
+}
+
