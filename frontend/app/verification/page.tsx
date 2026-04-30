@@ -1,6 +1,10 @@
 "use client"
 import { useUser } from "@/context/UserContext";
+import api from "@/lib/axios";
+import { useMutation } from "@tanstack/react-query";
+import { AxiosError } from "axios";
 import { useState, useRef, KeyboardEvent, ClipboardEvent, useEffect } from "react";
+import toast from "react-hot-toast";
 
 const DIGIT_COUNT = 6;
 
@@ -11,7 +15,7 @@ export default function OtpVerification() {
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [shake, setShake] = useState<boolean>(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const {user} = useUser();
+  const { user } = useUser();
   useEffect(() => {
     inputRefs.current[0]?.focus();
   }, []);
@@ -69,16 +73,36 @@ export default function OtpVerification() {
   };
 
   const handleSubmit = async () => {
+
     if (digits.some((d) => !d)) {
       setShake(true);
       setTimeout(() => setShake(false), 600);
       return;
     }
     setIsVerifying(true);
-    await new Promise((r) => setTimeout(r, 1500));
+    handleOtpSubmissionMutation.mutate()
     setIsVerifying(false);
-    alert(`OTP submitted: ${digits.join("")}`);
+    
   };
+
+  const handleOtpSubmissionMutation = useMutation({
+    mutationKey: ['otp-verify'],
+    mutationFn: async () => {
+      const otp = digits.join('')
+      const res = await api.post(`/api/verify-otp`, {
+        code:otp
+      })
+
+      return res.data
+    },
+    onError: async (error: AxiosError<{ error: string }>) => {
+      console.log(error.response?.data)
+      toast.error(error.response!.data.error)
+    },
+    onSuccess: () => {
+      toast.success("Verified successfully!")
+    }
+  })
 
   const filled = digits.filter(Boolean).length;
   const progress = (filled / DIGIT_COUNT) * 100;
@@ -210,11 +234,10 @@ export default function OtpVerification() {
                       <button
                         onClick={handleResend}
                         disabled={!canResend}
-                        className={`font-semibold ml-1 transition-all ${
-                          canResend
-                            ? "text-blue-400 hover:underline decoration-2 underline-offset-4 cursor-pointer"
-                            : "text-slate-500 cursor-not-allowed"
-                        }`}
+                        className={`font-semibold ml-1 transition-all ${canResend
+                          ? "text-blue-400 hover:underline decoration-2 underline-offset-4 cursor-pointer"
+                          : "text-slate-500 cursor-not-allowed"
+                          }`}
                       >
                         {canResend ? "Resend code" : `Resend (0:${String(countdown).padStart(2, "0")})`}
                       </button>

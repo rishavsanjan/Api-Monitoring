@@ -65,6 +65,10 @@ func (s *Service) VerifyEmail(userId string) error {
 	return  s.repo.VerifyEmail(userId)
 }
 
+func (s *Service) VerifyOtp(userId string, code string) error {
+	return  s.repo.VerifyOtp(userId, code)
+}
+
 func GenerateToken(userID string) (string, error) {
 
 	secret := []byte(os.Getenv("JWT_SECRET"))

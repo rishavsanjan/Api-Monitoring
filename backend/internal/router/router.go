@@ -55,6 +55,7 @@ func SetupRouter() *gin.Engine {
 		protected.GET("/monitors/:id", monitorHandler.RunMonitorNow)
 		protected.GET("/me", authHandler.VerifyUserToken)
 		protected.GET("/send-otp", authHandler.VerifyEmail)
+		protected.POST("/verify-otp", authHandler.VerifyOtp)
 	}
 
 	protected.GET("/monitors/:id/results", analyticsHandler.GetResults)

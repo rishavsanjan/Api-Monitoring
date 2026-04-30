@@ -118,6 +118,44 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 			"success": false,
 			"error":   err.Error(),
 		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+	})
+
+}
+
+type OtpVerificationRequest struct {
+	Code string `json:"code"`
+}
+
+func (h *Handler) VerifyOtp(c *gin.Context) {
+	userID := c.GetString("user_id")
+	var req OtpVerificationRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid data"})
+		return
+	}
+
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "user not authorized",
+		})
+		return
+	}
+
+	err := h.service.VerifyOtp(userID, req.Code)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
