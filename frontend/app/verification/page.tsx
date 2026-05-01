@@ -1,10 +1,12 @@
 "use client"
 import { useUser } from "@/context/UserContext";
 import api from "@/lib/axios";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { AxiosError } from "axios";
+import { useRouter } from "next/navigation";
 import { useState, useRef, KeyboardEvent, ClipboardEvent, useEffect } from "react";
 import toast from "react-hot-toast";
+import { ClipLoader } from "react-spinners";
 
 const DIGIT_COUNT = 6;
 
@@ -12,13 +14,15 @@ export default function OtpVerification() {
   const [digits, setDigits] = useState<string[]>(Array(DIGIT_COUNT).fill(""));
   const [countdown, setCountdown] = useState<number>(59);
   const [canResend, setCanResend] = useState<boolean>(false);
-  const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [shake, setShake] = useState<boolean>(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const { user } = useUser();
+  const { user, isFetchingUser } = useUser();
+  const router = useRouter();
   useEffect(() => {
     inputRefs.current[0]?.focus();
   }, []);
+
+
 
   useEffect(() => {
     if (countdown <= 0) {
@@ -28,6 +32,38 @@ export default function OtpVerification() {
     const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
   }, [countdown]);
+
+  useEffect(() => {
+    if (isFetchingUser) return
+
+    if (!user) {
+      router.push("/login")
+      return
+    }
+
+    if (user.isVerified) {
+      router.push("/dashboard")
+    }
+  }, [user, isFetchingUser, router])
+
+
+
+  const sendOtpMutation = useMutation({
+    mutationKey: ['send-otp'],
+    mutationFn: async () => {
+      const res = await api.get(`/api/send-otp`)
+      return res.data
+    },
+    onSuccess: () => toast.success("OTP sent successfully!"),
+    onError: () => toast.error("Error sending OTP"),
+  })
+
+  useEffect(() => {
+    if (!user || user.isVerified) return;
+    sendOtpMutation.mutate();
+  }, [user])
+
+
 
   const handleChange = (index: number, value: string) => {
     const sanitized = value.replace(/\D/g, "").slice(-1);
@@ -66,6 +102,7 @@ export default function OtpVerification() {
 
   const handleResend = () => {
     if (!canResend) return;
+    sendOtpMutation.mutate();
     setCountdown(59);
     setCanResend(false);
     setDigits(Array(DIGIT_COUNT).fill(""));
@@ -79,10 +116,8 @@ export default function OtpVerification() {
       setTimeout(() => setShake(false), 600);
       return;
     }
-    setIsVerifying(true);
     handleOtpSubmissionMutation.mutate()
-    setIsVerifying(false);
-    
+
   };
 
   const handleOtpSubmissionMutation = useMutation({
@@ -90,7 +125,7 @@ export default function OtpVerification() {
     mutationFn: async () => {
       const otp = digits.join('')
       const res = await api.post(`/api/verify-otp`, {
-        code:otp
+        code: otp
       })
 
       return res.data
@@ -101,11 +136,16 @@ export default function OtpVerification() {
     },
     onSuccess: () => {
       toast.success("Verified successfully!")
+      router.push("/dashboard")
     }
   })
 
   const filled = digits.filter(Boolean).length;
   const progress = (filled / DIGIT_COUNT) * 100;
+
+  if (isFetchingUser) {
+    return <ClipLoader />
+  }
 
   return (
     <div className="min-h-screen bg-[#101722] font-sans text-slate-100 flex flex-col relative overflow-hidden">
@@ -167,7 +207,7 @@ export default function OtpVerification() {
                   Verify your email
                 </h1>
                 <p className="text-slate-400 text-sm leading-relaxed max-w-[320px] mx-auto">
-                  We've sent a 6-digit verification code to{" "}
+                  We have sent a 6-digit verification code to{" "}
                   <span className="text-slate-200 font-semibold">{user?.email}</span>
                 </p>
               </div>
@@ -206,10 +246,10 @@ export default function OtpVerification() {
                 <div className="space-y-4">
                   <button
                     onClick={handleSubmit}
-                    disabled={isVerifying}
+                    disabled={handleOtpSubmissionMutation.isPending}
                     className="w-full py-4 px-6 bg-blue-500 hover:bg-blue-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                   >
-                    {isVerifying ? (
+                    {handleOtpSubmissionMutation.isPending ? (
                       <>
                         <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -230,7 +270,7 @@ export default function OtpVerification() {
 
                   <div className="text-center pt-2">
                     <p className="text-sm text-slate-400">
-                      Didn't receive the code?{" "}
+                      {"Didn't"} receive the code?{" "}
                       <button
                         onClick={handleResend}
                         disabled={!canResend}

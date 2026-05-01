@@ -1,12 +1,13 @@
 "use client"
 import { User } from "@/type/props";
 import axios from "axios";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, SetStateAction, useContext, useEffect, useState } from "react";
 
 
 type UserContext = {
     user: User | null,
     isFetchingUser:boolean
+    setUser:React.Dispatch<SetStateAction<User | null>>
 
 }
 
@@ -25,6 +26,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
                 const token = localStorage.getItem("api")
                 if (!token) {
                     setUser(null)
+                    setIsFetchingUser(false)
                     return
                 }
 
@@ -47,7 +49,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
 
     return (
-        <UserContext.Provider value={{ user, isFetchingUser }}>
+        <UserContext.Provider value={{ user, isFetchingUser, setUser }}>
             {children}
         </UserContext.Provider>
     )

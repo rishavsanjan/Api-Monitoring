@@ -5,6 +5,7 @@ import (
 	"api-monitoring-saas/internal/auth"
 	"api-monitoring-saas/internal/middleware"
 	"api-monitoring-saas/internal/monitor"
+	"api-monitoring-saas/internal/user"
 	"api-monitoring-saas/internal/ws"
 	"net/http"
 	"time"
@@ -37,6 +38,10 @@ func SetupRouter() *gin.Engine {
 	analyticsService := analytics.NewService(analyticsRepo)
 	analyticsHandler := analytics.NewHandler(analyticsService)
 
+	userRepo := user.NewRepository();
+	userService := user.NewService(userRepo)
+	userHandler := user.NewHandler(userService)
+
 	api := r.Group("/api")
 	{
 		api.POST("/register", authHandler.Register)
@@ -56,6 +61,7 @@ func SetupRouter() *gin.Engine {
 		protected.GET("/me", authHandler.VerifyUserToken)
 		protected.GET("/send-otp", authHandler.VerifyEmail)
 		protected.POST("/verify-otp", authHandler.VerifyOtp)
+		protected.POST("/update-profile", userHandler.UpdateProfile)
 	}
 
 	protected.GET("/monitors/:id/results", analyticsHandler.GetResults)

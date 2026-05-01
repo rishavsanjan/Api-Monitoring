@@ -5,7 +5,7 @@ import { useUser } from "@/context/UserContext";
 import api from "@/lib/axios";
 import { User } from "@/type/props";
 import { useMutation } from "@tanstack/react-query";
-import axios, { Axios, AxiosError } from "axios";
+import { AxiosError } from "axios";
 import { ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { JSX, useEffect, useState } from "react";
@@ -16,8 +16,7 @@ type Tab = "profile" | "notifications" | "security";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("profile");
-  const [saved, setSaved] = useState(false);
-  const { user, isFetchingUser } = useUser();
+  const { user, isFetchingUser, setUser } = useUser();
   const router = useRouter();
 
   const [profile, setProfile] = useState<User>({
@@ -56,9 +55,33 @@ export default function SettingsPage() {
         router.push('/verification');
       }, 200);
     },
-    onError: async (error:AxiosError<{error:string}>) => {
+    onError: async (error: AxiosError<{ error: string }>) => {
       console.log(error.response?.data)
       toast.error("Error sending OTP!")
+    }
+  })
+
+
+  const handleSaveMutation = useMutation({
+    mutationKey: ['profile-update'],
+    mutationFn: async () => {
+      const res = await api.post(`/api/update-profile`, {
+        name: profile.name
+      })
+
+      return res.data
+    },
+    onSuccess: () => {
+      toast.success("Profile updated successfully!")
+      setUser(prev =>
+        prev
+          ? { ...prev, name: profile.name }
+          : null
+      );
+
+    },
+    onError: () => {
+      toast.error("Error updating profile!")
     }
   })
 
@@ -68,9 +91,10 @@ export default function SettingsPage() {
   }
 
   const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    handleSaveMutation.mutate();
+
   };
+
 
 
 
@@ -243,7 +267,7 @@ export default function SettingsPage() {
                         disabled={(user?.name === profile.name && user.email === profile.email) || profile?.name.trim().length === 0 || profile?.email.trim().length === 0}
                         className="px-6 py-2 bg-blue-500 text-white text-sm font-bold rounded-lg shadow-lg shadow-blue-500/20 hover:bg-blue-600 transition-all active:scale-[0.98] flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-75"
                       >
-                        {saved ? (
+                        {handleSaveMutation.isSuccess ? (
                           <>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                               <polyline points="20 6 9 17 4 12" />

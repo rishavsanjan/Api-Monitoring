@@ -1,3 +1,5 @@
+import { useUser } from "@/context/UserContext";
+import { UserIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -23,6 +25,7 @@ const IconX = () => (
 );
 
 const Navbar = () => {
+  const { user } = useUser();
   const [open, setOpen] = useState(false);
   const links = ["Features", "Pricing", "Docs", "Blog"];
 
@@ -46,13 +49,26 @@ const Navbar = () => {
 
         {/* CTA */}
         <div className="hidden sm:flex items-center gap-4">
-          <Link href={`/auth?tab=login`} className="text-slate-400 text-sm font-semibold hover:text-white transition-colors px-3 py-2">
-            Log In
-          </Link>
+          {
+            user &&
+            <Link href={`/dashboard`} className="flex flex-row  items-center space-x-2 cursor-pointer">
+              <UserIcon  size={20} color="gray"/>
+              <span className="text-sm text-gray-500 font-semibold">{user.name}</span>
+            </Link>
+          }
+          {
+            !user &&
+            <>
+              <Link href={`/auth?tab=login`} className="text-slate-400 text-sm font-semibold hover:text-white transition-colors px-3 py-2">
+                Log In
+              </Link>
 
-          <Link  className="bg-blue-500 hover:bg-blue-400 text-white text-sm font-bold px-5 py-2.5 rounded-lg transition-all shadow-lg shadow-blue-500/20" href={'/auth?tab=signup'}>
-            Get Started
-          </Link>
+              <Link className="bg-blue-500 hover:bg-blue-400 text-white text-sm font-bold px-5 py-2.5 rounded-lg transition-all shadow-lg shadow-blue-500/20" href={'/auth?tab=signup'}>
+                Get Started
+              </Link>
+            </>
+          }
+
         </div>
 
         {/* Mobile toggle */}
