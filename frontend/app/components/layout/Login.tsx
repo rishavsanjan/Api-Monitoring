@@ -5,6 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import axios, { AxiosError } from "axios";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import { useUser } from "@/context/UserContext";
 
 interface LoginForm {
     email: string;
@@ -56,7 +57,7 @@ const LoginPage = ({ onSwitch }: { onSwitch: () => void }) => {
     const [showPw, setShowPw] = useState(false);
     const [errors, setErrors] = useState<Partial<Record<keyof LoginForm, string>>>({});
     const router = useRouter();
-
+    const { user, setUser, saveToken } = useUser();
     const loginMutation = useMutation({
         mutationKey: ['login'],
         mutationFn: async () => {
@@ -72,8 +73,9 @@ const LoginPage = ({ onSwitch }: { onSwitch: () => void }) => {
             return res.data
         },
         onSuccess: async (data) => {
-            
-            localStorage.setItem("api", data.token);
+
+            //localStorage.setItem("api", data.token);
+            saveToken(data.token)
             router.push("/dashboard?isLoggedIn=true");
 
 

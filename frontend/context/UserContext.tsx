@@ -6,8 +6,10 @@ import { createContext, SetStateAction, useContext, useEffect, useState } from "
 
 type UserContext = {
     user: User | null,
-    isFetchingUser:boolean
-    setUser:React.Dispatch<SetStateAction<User | null>>
+    isFetchingUser: boolean
+    setUser: React.Dispatch<SetStateAction<User | null>>
+    saveToken: (token: string) => void
+    logOut : () => void
 
 }
 
@@ -15,11 +17,22 @@ const UserContext = createContext<UserContext | null>(null)
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
-    const[isFetchingUser, setIsFetchingUser] = useState(true)
+    const [isFetchingUser, setIsFetchingUser] = useState(true)
+    const [token, setToken] = useState<string | null>(null)
     console.log(user)
+
+    const handleSaveToken = (newToken: string) => {
+        localStorage.setItem("api", newToken);
+        setToken(newToken);
+    };
+
+
+    const handleLogout = () => {
+        localStorage.removeItem("api")
+        setUser(null)
+    }
+
     useEffect(() => {
-
-
         const fetchUser = async () => {
             setIsFetchingUser(true)
             try {
@@ -39,17 +52,17 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
                 setUser(res.data.user)
             } catch {
                 setUser(null)
-            } finally{
+            } finally {
                 setIsFetchingUser(false)
             }
         }
 
         fetchUser()
-    }, [])
+    }, [token])
 
 
     return (
-        <UserContext.Provider value={{ user, isFetchingUser, setUser }}>
+        <UserContext.Provider value={{ user, isFetchingUser, setUser, saveToken:handleSaveToken, logOut:handleLogout }}>
             {children}
         </UserContext.Provider>
     )
