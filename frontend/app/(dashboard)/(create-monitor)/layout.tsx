@@ -1,5 +1,5 @@
 import { IconBell, IconChevronRight, IconHelp } from '@/app/components/icons/icons'
-import MonitorDropdown from '@/app/components/layout/AccordianDropdown';
+// import MonitorDropdown from '@/app/components/layout/AccordianDropdown';
 import React from 'react'
 
 interface Props {
@@ -43,7 +43,7 @@ const CreateMonitorLayout: React.FC<Props> = ({ children }) => {
                         </div>
                         <div className='mb-2'>
                             <p>Monitor Type</p>
-                            <MonitorDropdown/>
+                            {/* <MonitorDropdown/> */}
                         </div>
                         {children}
 

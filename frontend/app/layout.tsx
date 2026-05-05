@@ -1,18 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import QueryProvider from "@/providers/QueryProvider";
 import { Toaster } from "react-hot-toast";
 import LoginSuccessToast from "@/toast/LoginSuccessToast";
 import { UserProvider } from "@/context/UserContext";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
   subsets: ["latin"],
 });
 
@@ -23,24 +17,19 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-
+      <body className={`${inter.className} antialiased`}>
         <QueryProvider>
           <UserProvider>
             <LoginSuccessToast />
             <Toaster position="top-right" />
             {children}
           </UserProvider>
-
         </QueryProvider>
-
       </body>
     </html>
   );
