@@ -150,14 +150,6 @@ const Icons = {
   ),
 };
 
-const NAV_ITEMS: NavItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: Icons.dashboard },
-  { id: "incidents", label: "Incidents", icon: Icons.warning },
-  { id: "services", label: "Services", icon: Icons.services },
-  { id: "logs", label: "Logs", icon: Icons.logs },
-  { id: "settings", label: "Settings", icon: Icons.settings },
-];
-
 // ── Status / Severity helpers ─────────────────────────────────────────────────
 
 const STATUS_STYLES: Record<IncidentStatus, { badge: string; dot: string; label: string; pulse: boolean }> = {
@@ -196,7 +188,6 @@ const SEVERITY_STYLES: Record<IncidentSeverity, { dot: string; label: string; te
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function IncidentsDashboard() {
-  const [activeNav, setActiveNav] = useState("incidents");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
   const [severityFilter, setSeverityFilter] = useState<FilterSeverity>("all");
