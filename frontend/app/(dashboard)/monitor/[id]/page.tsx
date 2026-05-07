@@ -3,7 +3,8 @@
 import { IconChevronRight, IconEdit, IconPlay, IconTrendDown, IconTrendUp } from "@/app/components/icons/icons";
 import { EditMonitorModal } from "@/app/components/layout/EditReportModal";
 import HistoryTable from "@/app/components/layout/HistoryTable";
-import PerformanceChart from "@/charts/PerformanceChart";
+import PerformanceChart from "@/app/components/layout/PerformanceChart";
+// import PerformanceChart from "@/charts/PerformanceChart";
 import api from "@/lib/axios";
 import { MonitorHistory, MonitorPageResponse } from "@/type/props";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
