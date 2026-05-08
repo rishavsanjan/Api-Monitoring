@@ -1,14 +1,13 @@
 "use client";
 
 import { IconChevronRight, IconEdit, IconPlay, IconTrendDown, IconTrendUp } from "@/app/components/icons/icons";
-import { EditMonitorModal } from "@/app/components/layout/EditReportModal";
+import EditMonitorModal from "@/app/components/layout/EditMonitorModal";
 import HistoryTable from "@/app/components/layout/HistoryTable";
 import PerformanceChart from "@/app/components/layout/PerformanceChart";
-// import PerformanceChart from "@/charts/PerformanceChart";
 import api from "@/lib/axios";
 import { MonitorHistory, MonitorPageResponse } from "@/type/props";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Axios, AxiosError } from "axios";
+import { AxiosError } from "axios";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -233,14 +232,14 @@ export default function MonitorDetailPage() {
 
                         {/* History */}
                         <HistoryTable history={data?.history ?? []} />
-                        {showModal &&
+                         {showModal &&
                             <EditMonitorModal
                                 name={data.monitor.Name}
                                 url={data.monitor.URL}
                                 interval={data.monitor.Interval}
                                 onClose={() => setShowModal(false)}
                                 monitorId={data.monitor.ID}
-                            />}
+                            />} 
                     </div>
                 </main>
             </div>
