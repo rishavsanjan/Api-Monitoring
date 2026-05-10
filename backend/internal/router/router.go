@@ -62,6 +62,7 @@ func SetupRouter() *gin.Engine {
 		protected.GET("/send-otp", authHandler.VerifyEmail)
 		protected.POST("/verify-otp", authHandler.VerifyOtp)
 		protected.POST("/update-profile", userHandler.UpdateProfile)
+		protected.POST("/password-checker", userHandler.PasswordChecker)
 	}
 
 	protected.GET("/monitors/:id/results", analyticsHandler.GetResults)

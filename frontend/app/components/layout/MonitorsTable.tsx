@@ -147,7 +147,7 @@ export const MonitorsTable = (
                             setCurrentPage(prev => prev -= 1)
                         }}
                         disabled={currentPage == 1}
-                        className="px-3 py-1.5 rounded-lg border border-slate-700 text-sm font-medium text-slate-600 cursor-not-allowed">
+                        className="px-3 py-1.5 rounded-lg border border-slate-700 text-sm font-medium text-slate-600 disabled:cursor-not-allowed cursor-pointer">
                         Previous
                     </button>
                     {

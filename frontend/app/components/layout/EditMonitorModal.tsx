@@ -73,18 +73,21 @@ export default function EditMonitorModal({
   }
 
   async function handleSubmit() {
+    if (formUrl.trim().length === 0) {
+      setErrors(prev => ({ ...prev, url: "Enter a link" }));
+      return;
+    }
     if (formName.trim().length === 0) {
       setErrors(prev => ({ ...prev, name: "Name should not have zero characters!" }));
       return;
     }
-    if (formUrl.trim().length === 0) {
-      if (!isValidLink(formUrl)) {
-        setErrors(prev => ({ ...prev, url: "Please enter a valid link" }));
-        return;
-      }
-      setErrors(prev => ({ ...prev, url: "Enter a valid link" }));
+    if (!isValidLink(formUrl)) {
+      setErrors(prev => ({ ...prev, url: "Please enter a valid link" }));
       return;
     }
+
+    
+
     handleUpdateMutation.mutate();
   }
 
@@ -201,6 +204,10 @@ export default function EditMonitorModal({
               placeholder="https://example.com"
               className="w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-3.5 py-2.5 text-white text-sm placeholder-white/20 outline-none transition-all duration-150 focus:border-blue-500/60 focus:bg-white/[0.06] focus:ring-2 focus:ring-blue-500/20 font-mono"
             />
+            {
+                errors.url.length > 0 &&
+                <span className="text-red-800 text-xs px-3.5">{errors.url}</span>
+              }
           </div>
 
           {/* Interval */}
@@ -239,7 +246,7 @@ export default function EditMonitorModal({
               onClick={() => {
                 handleSubmit()
               }}
-              disabled={handleUpdateMutation.isPending || formName === name}
+              disabled={handleUpdateMutation.isPending || (formName === name && formInterval === interval && formUrl === url)}
               className="flex items-center gap-2 px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-all duration-150 cursor-pointer shadow shadow-blue-900/40"
             >
               {handleUpdateMutation.isPending ? (
