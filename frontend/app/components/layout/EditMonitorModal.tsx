@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { X, Globe, Clock, Tag } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import api from "@/lib/axios";
+import toast from "react-hot-toast";
+import { Monitor, MonitorPageResponse } from "@/type/props";
 
 interface EditMonitorModalProps {
   name: string;
@@ -9,7 +13,12 @@ interface EditMonitorModalProps {
   interval: number;
   monitorId: string;
   onClose: () => void;
-  onSave?: (data: { name: string; url: string; interval: number }) => Promise<void> | void;
+}
+
+interface Errors {
+  name: string,
+  url: string,
+  interval: string
 }
 
 export default function EditMonitorModal({
@@ -18,15 +27,19 @@ export default function EditMonitorModal({
   interval,
   monitorId,
   onClose,
-  onSave,
 }: EditMonitorModalProps) {
   const [formName, setFormName] = useState(name);
   const [formUrl, setFormUrl] = useState(url);
   const [formInterval, setFormInterval] = useState(interval);
-  const [saving, setSaving] = useState(false);
   const [visible, setVisible] = useState(false);
-  const overlayRef = useRef<HTMLDivElement>(null);
+  const [errors, setErrors] = useState<Errors>({
+    name: "",
+    url: "",
+    interval: ""
+  });
 
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
   // Fade in on mount
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true));
@@ -50,16 +63,70 @@ export default function EditMonitorModal({
     if (e.target === overlayRef.current) handleClose();
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
+  function isValidLink(input: string): boolean {
     try {
-      await onSave?.({ name: formName, url: formUrl, interval: formInterval });
-      handleClose();
-    } finally {
-      setSaving(false);
+      const url = new URL(input)
+      return url.protocol === "http:" || url.protocol === "https:"
+    } catch {
+      return false
     }
   }
+
+  async function handleSubmit() {
+    if (formName.trim().length === 0) {
+      setErrors(prev => ({ ...prev, name: "Name should not have zero characters!" }));
+      return;
+    }
+    if (formUrl.trim().length === 0) {
+      if (!isValidLink(formUrl)) {
+        setErrors(prev => ({ ...prev, url: "Please enter a valid link" }));
+        return;
+      }
+      setErrors(prev => ({ ...prev, url: "Enter a valid link" }));
+      return;
+    }
+    handleUpdateMutation.mutate();
+  }
+
+  const handleUpdateMutation = useMutation({
+    mutationKey: ['update-monitor', monitorId],
+    mutationFn: async () => {
+      const res = await api.patch(`/api/monitors/${monitorId}/update`, {
+        name: formName,
+        url: formUrl,
+        interval: formInterval
+      })
+
+      return res.data
+    },
+    onSuccess: async () => {
+
+      if (interval !== formInterval || url !== formUrl) {
+        await queryClient.cancelQueries({ queryKey: ["monitor-result", monitorId] });
+      }
+
+      queryClient.setQueryData<MonitorPageResponse>(["monitor-result", monitorId],
+        (old) => {
+          if (!old) return old;
+          if (old.monitor.ID !== monitorId) return old;
+          return {
+            ...old,
+            monitor: {
+              ...old.monitor,
+              Name: formName,
+              Interval: formInterval,
+              URL: formUrl
+            }
+          }
+        }
+      )
+      handleClose()
+      toast.success("Monitor updated successfully!")
+    },
+    onError: () => {
+      toast.error("Some error occured!")
+    }
+  })
 
   return (
     <div
@@ -96,21 +163,28 @@ export default function EditMonitorModal({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+        <div className="px-6 py-5 space-y-4">
           {/* Name */}
           <div className="space-y-1.5">
             <label className="flex items-center gap-1.5 text-white/50 text-xs font-medium uppercase tracking-wider">
               <Tag size={11} />
               Name
             </label>
-            <input
-              type="text"
-              value={formName}
-              onChange={(e) => setFormName(e.target.value)}
-              required
-              placeholder="My Monitor"
-              className="w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-3.5 py-2.5 text-white text-sm placeholder-white/20 outline-none transition-all duration-150 focus:border-blue-500/60 focus:bg-white/[0.06] focus:ring-2 focus:ring-blue-500/20"
-            />
+            <div>
+              <input
+                type="text"
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                required
+                placeholder="My Monitor"
+                className="w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-3.5 py-2.5 text-white text-sm placeholder-white/20 outline-none transition-all duration-150 focus:border-blue-500/60 focus:bg-white/[0.06] focus:ring-2 focus:ring-blue-500/20"
+              />
+              {
+                errors.name.length > 0 &&
+                <span className="text-red-800 text-xs px-3.5">{errors.name}</span>
+              }
+            </div>
+
           </div>
 
           {/* URL */}
@@ -162,11 +236,13 @@ export default function EditMonitorModal({
               Cancel
             </button>
             <button
-              type="submit"
-              disabled={saving}
+              onClick={() => {
+                handleSubmit()
+              }}
+              disabled={handleUpdateMutation.isPending || formName === name}
               className="flex items-center gap-2 px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-all duration-150 cursor-pointer shadow shadow-blue-900/40"
             >
-              {saving ? (
+              {handleUpdateMutation.isPending ? (
                 <>
                   <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   Saving…
@@ -176,7 +252,7 @@ export default function EditMonitorModal({
               )}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

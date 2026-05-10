@@ -158,7 +158,7 @@ export default function MonitorDetailPage() {
                         {/* Breadcrumb */}
                         <nav className="flex items-center gap-1.5 text-sm text-slate-500 mb-5">
 
-                            <button onClick={() => { router.push('/dashboard') }} className="hover:text-blue-400 transition-colors">Monitors</button>
+                            <button onClick={() => { router.push('/dashboard') }} className="hover:text-blue-400 transition-colors cursor-pointer">Monitors</button>
                             <IconChevronRight />
                             <span className="text-white font-medium">{data?.monitor.Name}</span>
                         </nav>
