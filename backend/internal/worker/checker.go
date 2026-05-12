@@ -4,19 +4,22 @@ import (
 	"api-monitoring-saas/internal/alert"
 	"api-monitoring-saas/internal/database"
 	"api-monitoring-saas/internal/models"
+	"api-monitoring-saas/internal/security"
 	"api-monitoring-saas/internal/ws"
 	"encoding/json"
 	"fmt"
-	"github.com/PaesslerAG/jsonpath"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/PaesslerAG/jsonpath"
 )
 
 func RunMonitoringCycle() {
@@ -90,9 +93,8 @@ func RunMonitoringCycle() {
 			}(monitor)
 		case "synthetic":
 			go func(m models.Monitor) {
-				var config MonitorConfig
 
-				fmt.Println("synthetic is running :")
+				var config MonitorConfig
 
 				err := json.Unmarshal(m.Config, &config)
 				if err != nil {
@@ -100,15 +102,55 @@ func RunMonitoringCycle() {
 					return
 				}
 
-				log.Println("Parsed steps:", len(config.Steps))
+				// Load secrets
+				var secrets []models.Secret
+
+				err = database.DB.
+					Where("monitor_id = ?", m.ID).
+					Find(&secrets).Error
+
+				if err != nil {
+					log.Println("Failed to load secrets:", err)
+					return
+				}
+
+				// Build decrypted secret map
+				secretMap := make(map[string]string)
+
+				encryptionService := security.NewEncryptionService(
+					os.Getenv("ENCRYPTION_KEY"),
+				)
+
+				for _, secret := range secrets {
+
+					decrypted, err := encryptionService.Decrypt(
+						secret.EncryptedValue,
+					)
+
+					if err != nil {
+						log.Println("Failed to decrypt secret:", err)
+						return
+					}
+
+					secretMap[secret.Key] = decrypted
+				}
+
+				// Replace variables
+				ReplaceVariablesInConfig(
+					&config,
+					secretMap,
+				)
+
 				status := "DOWN"
 				var responseTime int64
 
-				status, responseTime, err = RunSyntheticMonitor(config)
-				log.Println(status, responseTime, err)
+				status, responseTime, err =
+					RunSyntheticMonitor(config)
+
 				if err != nil {
 					log.Println("Synthetic monitor failed:", err)
 				}
+
 				result := models.MonitorResult{
 					MonitorID:      m.ID,
 					Status:         status,
@@ -116,14 +158,69 @@ func RunMonitoringCycle() {
 					ResponseTimeMs: int(responseTime),
 					CheckedAt:      time.Now(),
 				}
+
 				database.DB.Create(&result)
+
 				msg, _ := json.Marshal(result)
+
 				ws.SendToUser(m.UserId, msg)
 
 			}(monitor)
+
 		}
 
 	}
+}
+
+func ReplaceVariablesInConfig(
+	config *MonitorConfig,
+	secrets map[string]string,
+) {
+
+	for i := range config.Steps {
+
+		request := &config.Steps[i].Request
+
+		// Replace body
+		request.Body = replaceVariables(
+			request.Body,
+			secrets,
+		)
+
+		// Replace headers
+		for key, value := range request.Headers {
+
+			request.Headers[key] = replaceVariables(
+				value,
+				secrets,
+			)
+		}
+	}
+}
+
+func replaceVariables(
+	input string,
+	secrets map[string]string,
+) string {
+
+	re := regexp.MustCompile(`\{\{(.*?)\}\}`)
+
+	return re.ReplaceAllStringFunc(
+		input,
+		func(match string) string {
+
+			key := strings.TrimSuffix(
+				strings.TrimPrefix(match, "{{"),
+				"}}",
+			)
+
+			if value, ok := secrets[key]; ok {
+				return value
+			}
+
+			return match
+		},
+	)
 }
 
 func checkHttpMonitor(monitor models.Monitor, alertService *alert.Service) {
@@ -443,7 +540,7 @@ func RunSyntheticMonitor(config MonitorConfig) (string, int64, error) {
 	for _, step := range config.Steps {
 		log.Println("Running step:", step.Name)
 		// Replace variables in request
-		reqConfig := replaceVariables(step.Request, variables)
+		reqConfig := replaceVariablesInReq(step.Request, variables)
 
 		// Build request
 		req, err := buildRequest(reqConfig)
@@ -510,7 +607,7 @@ func buildRequest(cfg RequestConfig) (*http.Request, error) {
 	return req, nil
 }
 
-func replaceVariables(req RequestConfig, vars map[string]string) RequestConfig {
+func replaceVariablesInReq(req RequestConfig, vars map[string]string) RequestConfig {
 
 	replace := func(input string) string {
 		for k, v := range vars {

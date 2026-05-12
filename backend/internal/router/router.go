@@ -31,7 +31,8 @@ func SetupRouter() *gin.Engine {
 	authHandler := auth.NewHandler(authService)
 
 	monitorRepo := monitor.NewRepository()
-	monitorService := monitor.NewService(monitorRepo)
+	secretRepo := monitor.NewSecretRepository()
+	monitorService := monitor.NewService(monitorRepo, secretRepo, "rishav")
 	monitorHandler := monitor.NewHandler(monitorService)
 
 	analyticsRepo := analytics.NewRepository()

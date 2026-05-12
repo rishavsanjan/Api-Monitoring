@@ -1,5 +1,5 @@
 import { IconBell, IconChevronRight, IconHelp } from '@/app/components/icons/icons'
-// import MonitorDropdown from '@/app/components/layout/AccordianDropdown';
+import MonitorDropdown from '@/app/components/layout/MonitorDropdown'
 import React from 'react'
 
 interface Props {
@@ -41,14 +41,15 @@ const CreateMonitorLayout: React.FC<Props> = ({ children }) => {
                                 Configure your endpoint monitoring parameters. We will alert you immediately if it goes down.
                             </p>
                         </div>
-                        <div className='mb-2'>
-                            <p>Monitor Type</p>
-                            {/* <MonitorDropdown/> */}
+
+                        <div className="mb-6">
+                            <p className="text-sm font-medium text-slate-400 mb-2">Monitor Type</p>
+                            <MonitorDropdown />
                         </div>
+
                         {children}
 
                     </div>
-
                 </div>
 
             </main>

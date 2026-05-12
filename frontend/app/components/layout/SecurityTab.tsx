@@ -26,13 +26,6 @@ const SecurityTab = () => {
         return () => window.clearTimeout(timer); // <-- moved here
     }, [currentPassword]);
 
-    // Fix 2: trigger the checker when debounced value changes
-    useEffect(() => {
-        if (currentPasswordDebounced) {
-            currentPasswordCheckerMutation.mutate();
-        }
-    }, [currentPasswordDebounced]);
-
     // Fix 3: unique mutationKey
     const currentPasswordCheckerMutation = useMutation({
         mutationKey: ['check-current-password'],
@@ -48,6 +41,15 @@ const SecurityTab = () => {
             setErrors(prev => ({ ...prev, currentPasswordError: "Wrong password!" }));
         }
     });
+
+    // Fix 2: trigger the checker when debounced value changes
+    useEffect(() => {
+        if (currentPasswordDebounced) {
+            currentPasswordCheckerMutation.mutate();
+        }
+    }, [currentPasswordDebounced]);
+
+    
 
     // Fix 4: unique mutationKey
     const changePasswordMutation = useMutation({

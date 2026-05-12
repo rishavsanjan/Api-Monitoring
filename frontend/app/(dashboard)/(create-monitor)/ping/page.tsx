@@ -3,7 +3,7 @@
 import { IconLink, IconPlus, IconShield } from "@/app/components/icons/icons";
 import AuthToken from "@/app/components/layout/AuthToken";
 import FrequencySlider from "@/app/components/layout/FrequenctSlider";
-import Input from "@/app/components/layout/Input";
+// import Input from "@/app/components/layout/Input";
 import JsonBodyEditor from "@/app/components/layout/JsonBodyEditor";
 import api from "@/lib/axios";
 import { KeywordMonitorForm, MonitorWithStatus, PingMonitorForm, Stats } from "@/type/props";
@@ -192,7 +192,7 @@ export default function CreateMonitorPage() {
                     {/* Basic Info */}
                     <FormSection title="Basic Info">
 
-                        <Input
+                        {/* <Input
                             label="Name"
                             placeholder="e.g. Host 1"
                             value={form.name}
@@ -207,7 +207,7 @@ export default function CreateMonitorPage() {
                             onChange={(e) => setForm({ ...form, url: e.target.value })}
                             error={errors.url}
                             prefixIcon={<IconLink />}
-                        />
+                        /> */}
 
                         <FrequencySlider
                             value={form.interval}
