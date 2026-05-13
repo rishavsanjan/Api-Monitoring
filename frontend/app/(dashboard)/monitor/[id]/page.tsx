@@ -227,7 +227,7 @@ export default function MonitorDetailPage() {
                             <StatCard label="Total Checks" value={`${String(data.stats.totalLogs)}`} delta="Scheduled" deltaPositive={null} />
                         </div>
 
-                        <PerformanceChart data={data.chartData} monitorId={data.monitor.ID} />
+                        <PerformanceChart  data={data.chartData} monitorId={data.monitor.ID} />
 
 
                         {/* History */}

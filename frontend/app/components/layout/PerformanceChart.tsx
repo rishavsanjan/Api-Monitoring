@@ -44,7 +44,6 @@ function CustomTooltip({ active, payload, label }: TooltipProps<number, string>)
 }
 
 export default function PerformanceChart({ data, monitorId }: PerformanceChartProps) {
-  // Filter out negative values and ensure all values are positive
   const positiveData = data.map(point => ({
     ...point,
     value: Math.max(0, point.value)
@@ -54,12 +53,10 @@ export default function PerformanceChart({ data, monitorId }: PerformanceChartPr
   const minV = vals.length ? Math.min(...vals) : 0;
   const maxV = vals.length ? Math.max(...vals) : 100;
   
-  // Ensure domain starts at 0 (no negative values)
   const yMin = 0;
   const pad = (maxV - yMin) * 0.15 || 20;
   const yMax = Math.ceil((maxV + pad) / 10) * 10;
 
-  // Smart tick calculation for X-axis
   const getTicks = () => {
     if (positiveData.length <= 6) return positiveData.map(d => d.time);
     const step = Math.floor(positiveData.length / 5);
@@ -69,13 +66,12 @@ export default function PerformanceChart({ data, monitorId }: PerformanceChartPr
   const gradientId = `fill-${monitorId}`;
   const ticks = getTicks();
 
-  // Calculate average response time for stats
   const avgResponse = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
   const latestResponse = vals[vals.length - 1] || 0;
   const isHealthy = latestResponse < 100;
 
   return (
-    <div className="group rounded-2xl border border-white/[0.06] bg-gradient-to-br from-[#0a0f1a] to-[#0d1521] hover:border-white/[0.12] transition-all duration-300">
+    <div className="group rounded-2xl mb-4 border border-white/[0.06] bg-gradient-to-br from-[#0a0f1a] to-[#0d1521]  hover:border-white/[0.12] transition-all duration-300">
       {/* Header with enhanced stats */}
       <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-white/[0.04]">
         <div className="flex items-center gap-3">
