@@ -1,9 +1,11 @@
 "use client"
+import MonitorSuccessModel from "@/app/components/layout/MonitorSuccessModel";
 import api from "@/lib/axios";
 import { Editor } from "@monaco-editor/react";
 import { useMutation } from "@tanstack/react-query";
 import { ChevronRightIcon, TrashIcon } from "lucide-react";
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { ClipLoader } from "react-spinners";
 
 interface Extract {
@@ -76,6 +78,7 @@ const MonitorCard = () => {
     const [nameErr, setNameErr] = useState("");
     const [urlErr, setUrlErr] = useState("");
     const [bodyError, setBodyError] = useState("");
+    const [successModel, setSuccessModel] = useState(false)
 
     const update = (
         key: keyof MonitorForm | "variableName" | "path",
@@ -149,22 +152,48 @@ const MonitorCard = () => {
                 }
             }
 
+          
             const res = await api.post(`/api/monitors`, {
                 name: monitor.name,
                 url: monitor.url,
                 type: "keyword",
                 interval: 60,
                 method: monitor.method,
-                config: config
+                config: config()
             })
-
+            console.log(res.data)
             return res.data
+        },
+        onError: () => {
+            toast.error("Unable to upload!")
+        },
+        onSuccess: () => {
+            toast.success("Monitor uploaded successfully!")
         }
     })
+
+    const handleSuccessModelClose = () => {
+        setSuccessModel(false);
+        setMonitor({
+            name: "",
+            url: "",
+            method: "GET",
+            keyword: "",
+            token: "",
+            body: "",
+            showAdv: false,
+            showToken: false,
+            extract: { variableName: "", path: "" },
+        })
+    }
 
     return (
         <div className="min-h-screen  flex items-start justify-center p-6 bg-[#101722] w-full mx-auto">
             <div className="w-full  space-y-6">
+                {
+                    (createKeyWordMonitorMutation.isSuccess && successModel) &&
+                    <MonitorSuccessModel name={monitor.name} url={monitor.url} setSuccessModel={setSuccessModel} handleCloseModel={handleSuccessModelClose} />
+                }
                 {/* Page header */}
                 <div className="space-y-1">
                     <h1 className="text-xl font-semibold text-slate-100">New Monitor</h1>
@@ -403,7 +432,7 @@ const MonitorCard = () => {
                     >
                         {
                             createKeyWordMonitorMutation.isPending ?
-                                <ClipLoader color="white " size={15}/>
+                                <ClipLoader color="white " size={15} />
 
                                 :
                                 "Save Monitor"

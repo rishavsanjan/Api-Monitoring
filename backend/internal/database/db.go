@@ -32,6 +32,7 @@ func migrate() {
 		&models.MonitorResult{},
 		&models.Alert{},
 		&models.OTP{},
+		&models.Secret{},
 	)
 
 	if err != nil {

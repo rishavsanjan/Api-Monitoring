@@ -80,7 +80,16 @@ func (h *Handler) CreateMonitor(c *gin.Context) {
 
 	userId := c.GetString("user_id")
 
-	h.service.CreateMonitor(userId, req.Name, req.URL, req.Type, req.Config, req.Method)
+	err := h.service.CreateMonitor(userId, req.Name, req.URL, req.Type, req.Config, req.Method)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "monitor created",

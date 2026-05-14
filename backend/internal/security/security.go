@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"os"
 )
 
 type EncryptionService struct {
@@ -23,7 +24,9 @@ func NewEncryptionService(secretKey string) *EncryptionService {
 func (e *EncryptionService) Encrypt(
 	plainText string,
 ) (string, error) {
-
+	fmt.Println("en key")
+	fmt.Println(os.Getenv("ENCRYPTION_KEY"))
+	fmt.Println(e.key)
 	block, err := aes.NewCipher(e.key)
 	if err != nil {
 		return "", err

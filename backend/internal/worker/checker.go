@@ -4,6 +4,7 @@ import (
 	"api-monitoring-saas/internal/alert"
 	"api-monitoring-saas/internal/database"
 	"api-monitoring-saas/internal/models"
+	"api-monitoring-saas/internal/monitor"
 	"api-monitoring-saas/internal/security"
 	"api-monitoring-saas/internal/ws"
 	"encoding/json"
@@ -25,6 +26,10 @@ import (
 func RunMonitoringCycle() {
 	alertRepo := alert.NewRepository()
 	alertService := alert.NewService(alertRepo)
+
+	secretService := monitor.NewSecretRepository()
+	encryptionService := security.NewEncryptionService(os.Getenv("ENCRYPTION_KEY"))
+
 	var monitors []models.Monitor
 
 	err := database.DB.
@@ -47,7 +52,7 @@ func RunMonitoringCycle() {
 			go checkHttpMonitor(monitor, alertService)
 		case "keyword":
 			go func(m models.Monitor) {
-				status, responseTime, statusCode, err := RunKeywordCheck(m, alertService)
+				status, responseTime, statusCode, err := RunKeywordCheck(m, alertService, secretService, encryptionService)
 				if err != nil {
 					status = "DOWN"
 				}
@@ -266,46 +271,148 @@ func checkHttpMonitor(monitor models.Monitor, alertService *alert.Service) {
 }
 
 type KeywordConfig struct {
-	Headers        map[string]string `json:"headers"`
-	Body           string            `json:"requestBody"`
-	MustContain    []string          `json:"mustContain"`
-	MustNotContain []string          `json:"mustNotContain"`
-	UseRegex       bool              `json:"useRegex"`
+    Name    string `json:"name"`
+    Extract map[string]string `json:"extract"`
+    Request struct {
+        URL     string            `json:"url"`
+        Body    string            `json:"body"`
+        Method  string            `json:"method"`
+        Headers map[string]string `json:"headers"`
+    } `json:"request"`
+    Assertions struct {
+        Status         int      `json:"status"`
+        MustContain    []string `json:"mustContain"`
+        MustNotContain []string `json:"mustNotContain"`
+        UseRegex       bool     `json:"useRegex"`
+    } `json:"assertions"`
 }
+
 
 func RunKeywordCheck(
 	monitor models.Monitor,
 	alertService *alert.Service,
+	secretRepo *monitor.SecretRepository,
+	encryptionService *security.EncryptionService,
 ) (string, int64, int, error) {
 
 	start := time.Now()
 
+	log.Println("===================================")
+	log.Println("RUNNING KEYWORD MONITOR")
+	log.Println("Monitor ID:", monitor.ID)
+	log.Println("Monitor URL:", monitor.URL)
+	log.Println("===================================")
+
 	// 🔹 Parse config
 	var cfg KeywordConfig
+
 	if err := json.Unmarshal(monitor.Config, &cfg); err != nil {
-		log.Println("config error:", err)
+		log.Println("❌ CONFIG PARSE ERROR:", err)
 		return "DOWN", 0, 0, err
 	}
 
-	// 🔹 Prepare request body
+	log.Printf("%+v\n", cfg)
+	log.Println("✅ Config parsed successfully")
+
+	// 🔐 Load monitor secrets
+	secrets, err := secretRepo.GetMonitorSecrets(monitor.ID)
+	if err != nil {
+		log.Println("❌ SECRET LOAD ERROR:", err)
+		return "DOWN", 0, 0, err
+	}
+
+	log.Println("✅ Secrets loaded:", len(secrets))
+
+	// 🔐 Build variables map
+	variables := make(map[string]string)
+
+	for _, secret := range secrets {
+		log.Println("Decrypting secret:", secret.Key)
+
+		decrypted, err := encryptionService.Decrypt(secret.EncryptedValue)
+		if err != nil {
+			log.Println("❌ SECRET DECRYPT ERROR:", err)
+			return "DOWN", 0, 0, err
+		}
+
+		variables[secret.Key] = decrypted
+	}
+
+	log.Println("✅ Variables prepared")
+
+	// 🔄 Replace variables in body
+	cfg.Request.Body = replaceVariables(cfg.Request.Body, variables)
+
+	// 🔧 Unwrap double-encoded JSON body if needed
+	// e.g. "{\"phone_number\": \"123\"}" → {"phone_number": "123"}
+	var unwrapped string
+	if err := json.Unmarshal([]byte(cfg.Request.Body), &unwrapped); err == nil {
+		log.Println("⚠️ Body was double-encoded, unwrapping...")
+		cfg.Request.Body = strings.TrimSpace(unwrapped)
+	}
+
+	log.Println("✅ Body variables replaced")
+	log.Println(cfg.Request.Body)
+
+	// 🔄 Replace variables in headers, skip empty Bearer tokens
+	resolvedHeaders := make(map[string]string)
+
+	for key, value := range cfg.Request.Headers {
+		resolved := replaceVariables(value, variables)
+
+		if strings.EqualFold(key, "Authorization") {
+			trimmed := strings.TrimSpace(resolved)
+			parts := strings.SplitN(trimmed, " ", 2)
+			if len(parts) < 2 || strings.TrimSpace(parts[1]) == "" {
+				log.Println("⚠️ Skipping Authorization header — token is empty")
+				continue
+			}
+		}
+
+		resolvedHeaders[key] = resolved
+	}
+
+	log.Println("✅ Header variables replaced")
+
+	// 🔹 Prepare request body reader
 	var bodyReader io.Reader = nil
-	if cfg.Body != "" {
-		bodyReader = strings.NewReader(cfg.Body)
+
+	log.Println("FINAL REQUEST BODY:")
+	log.Println(cfg.Request.Body)
+
+	if cfg.Request.Body != "" {
+		log.Println("Request body exists")
+		bodyReader = strings.NewReader(cfg.Request.Body)
+	}
+
+	// 🔹 Resolve method and URL
+	method := cfg.Request.Method
+	if method == "" {
+		method = monitor.Method
+	}
+
+	url := cfg.Request.URL
+	if url == "" {
+		url = monitor.URL
 	}
 
 	// 🔹 Create request
-	req, err := http.NewRequest(monitor.Method, monitor.URL, bodyReader)
+	req, err := http.NewRequest(method, url, bodyReader)
 	if err != nil {
+		log.Println("❌ REQUEST BUILD ERROR:", err)
 		return "DOWN", 0, 0, err
 	}
 
-	// 🔹 Add headers
-	for k, v := range cfg.Headers {
+	log.Println("✅ Request created")
+
+	// 🔹 Add resolved headers
+	for k, v := range resolvedHeaders {
 		req.Header.Set(k, v)
+		log.Println("Header added:", k)
 	}
 
-	// 🔹 Default content-type for body
-	if cfg.Body != "" && req.Header.Get("Content-Type") == "" {
+	// 🔹 Default content-type
+	if cfg.Request.Body != "" && req.Header.Get("Content-Type") == "" {
 		req.Header.Set("Content-Type", "application/json")
 	}
 
@@ -314,50 +421,66 @@ func RunKeywordCheck(
 		Timeout: 10 * time.Second,
 	}
 
+	log.Println("🚀 Sending request...")
+
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Println("request error:", err)
+		log.Println("❌ REQUEST ERROR:", err)
 		return "DOWN", 0, 0, err
 	}
-	defer resp.Body.Close()
 
-	// 🔹 Read response (limit 1MB)
+	log.Println("✅ Response received:", resp.StatusCode)
+
+	// 🔹 Read response safely
 	bodyBytes, err := io.ReadAll(io.LimitReader(resp.Body, 1_000_000))
+	resp.Body.Close()
+
 	if err != nil {
-		log.Println("read error:", err)
+		log.Println("❌ RESPONSE READ ERROR:", err)
 		return "DOWN", 0, 0, err
 	}
 
 	body := string(bodyBytes)
-	bodyLower := strings.ToLower(body)
+	log.Println("✅ Response body length:", len(body))
 
-	// 🔹 Debug (safe preview)
 	previewLen := min(500, len(body))
-	log.Println("BODY PREVIEW:", body[:previewLen])
+	log.Println("📦 BODY PREVIEW:", body[:previewLen])
 
+	bodyLower := strings.ToLower(body)
 	status := "UP"
 	statusCode := resp.StatusCode
 
 	// ✅ HTTP status check
-	if statusCode != monitor.ExpectedStatus {
-		log.Println("status mismatch:", statusCode)
+	expectedStatus := cfg.Assertions.Status
+	if expectedStatus == 0 {
+		expectedStatus = monitor.ExpectedStatus
+	}
+
+	if statusCode != expectedStatus {
+		log.Println("❌ STATUS MISMATCH: expected:", expectedStatus, "got:", statusCode)
 		status = "DOWN"
 	}
 
 	// 🔍 MUST CONTAIN
-	for _, keyword := range cfg.MustContain {
+	for _, keyword := range cfg.Assertions.MustContain {
 		keyword = strings.TrimSpace(keyword)
+		log.Println("Checking mustContain:", keyword)
 
-		if cfg.UseRegex {
+		if cfg.Assertions.UseRegex {
 			matched, err := regexp.MatchString(keyword, body)
-			if err != nil || !matched {
-				log.Println("regex mustContain failed:", keyword)
+			if err != nil {
+				log.Println("❌ REGEX ERROR:", err)
+				status = "DOWN"
+				break
+			}
+			if !matched {
+				log.Println("❌ REGEX NOT MATCHED:", keyword)
 				status = "DOWN"
 				break
 			}
 		} else {
 			if !strings.Contains(bodyLower, strings.ToLower(keyword)) {
-				log.Println("mustContain missing:", keyword)
+				log.Println("❌ MUST CONTAIN FAILED:", keyword)
 				status = "DOWN"
 				break
 			}
@@ -365,19 +488,25 @@ func RunKeywordCheck(
 	}
 
 	// 🔍 MUST NOT CONTAIN
-	for _, keyword := range cfg.MustNotContain {
+	for _, keyword := range cfg.Assertions.MustNotContain {
 		keyword = strings.TrimSpace(keyword)
+		log.Println("Checking mustNotContain:", keyword)
 
-		if cfg.UseRegex {
+		if cfg.Assertions.UseRegex {
 			matched, err := regexp.MatchString(keyword, body)
-			if err == nil && matched {
-				log.Println("regex mustNotContain triggered:", keyword)
+			if err != nil {
+				log.Println("❌ REGEX ERROR:", err)
+				status = "DOWN"
+				break
+			}
+			if matched {
+				log.Println("❌ MUST NOT CONTAIN MATCHED:", keyword)
 				status = "DOWN"
 				break
 			}
 		} else {
 			if strings.Contains(bodyLower, strings.ToLower(keyword)) {
-				log.Println("mustNotContain found:", keyword)
+				log.Println("❌ MUST NOT CONTAIN FOUND:", keyword)
 				status = "DOWN"
 				break
 			}
@@ -386,12 +515,14 @@ func RunKeywordCheck(
 
 	responseTime := time.Since(start).Milliseconds()
 
+	log.Println("✅ FINAL STATUS:", status)
+	log.Println("⏱ RESPONSE TIME:", responseTime, "ms")
+
 	// 🔔 Alert handling
 	alertService.HandleStatusChange(monitor.ID, status)
 
 	return status, responseTime, statusCode, nil
 }
-
 type PingConfig struct {
 	Host     string `json:"host"`
 	Attempts int    `json:"attempts"`

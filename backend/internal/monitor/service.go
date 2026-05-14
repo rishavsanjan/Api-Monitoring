@@ -74,7 +74,7 @@ func (s *Service) CreateMonitor(
 	monitorID := uuid.New().String()
 
 	// Extract + encrypt sensitive values
-	sanitizedConfig, secrets, err := ExtractSecrets(config)
+	sanitizedConfig, secrets, err := ExtractSecrets(monitorType ,config)
 	if err != nil {
 		return err
 	}
@@ -88,6 +88,7 @@ func (s *Service) CreateMonitor(
 		}
 
 		secret := models.Secret{
+			ID: uuid.New().String(),
 			UserID:         userId,
 			MonitorID:      monitorID,
 			Key:            key,
@@ -136,7 +137,30 @@ func (s *Service) GetMonitorHistory(userId string, page int, monitorId string) (
 	return s.repo.GetMonitorHistory(userId, page, monitorId)
 }
 
+
 func ExtractSecrets(
+	monitorType string,
+	config map[string]interface{},
+) (map[string]interface{}, map[string]string, error) {
+
+	switch monitorType {
+
+	case "synthetic":
+		return extractSyntheticSecrets(config)
+
+	case "keyword":
+		return extractKeywordSecrets(config)
+
+	default:
+		return config,
+			make(map[string]string),
+			nil
+	}
+}
+
+
+
+func extractSyntheticSecrets(
 	config map[string]interface{},
 ) (map[string]interface{}, map[string]string, error) {
 
@@ -149,7 +173,8 @@ func ExtractSecrets(
 
 	steps, ok := stepsRaw.([]interface{})
 	if !ok {
-		return nil, nil, errors.New("invalid steps format")
+		return nil, nil,
+			errors.New("invalid steps format")
 	}
 
 	for stepIndex, stepRaw := range steps {
@@ -169,49 +194,105 @@ func ExtractSecrets(
 			continue
 		}
 
-		// Encrypt full body
-		if body, exists := request["body"]; exists && body != nil {
+		extractRequestSecrets(
+			request,
+			stepIndex,
+			secrets,
+		)
+	}
 
-			bodyBytes, err := json.Marshal(body)
-			if err != nil {
-				return nil, nil, err
-			}
+	return config, secrets, nil
+}
 
-			secretKey := fmt.Sprintf(
-				"step_%d_body",
-				stepIndex,
-			)
+func extractKeywordSecrets(
+	config map[string]interface{},
+) (map[string]interface{}, map[string]string, error) {
 
-			secrets[secretKey] = string(bodyBytes)
+	secrets := make(map[string]string)
 
-			request["body"] = "{{" + secretKey + "}}"
+	requestRaw, ok := config["request"]
+	if !ok {
+		return config, secrets, nil
+	}
+
+	request, ok := requestRaw.(map[string]interface{})
+	if !ok {
+		return nil, nil,
+			errors.New("invalid request format")
+	}
+
+	err := extractRequestSecrets(
+		request,
+		0,
+		secrets,
+	)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return config, secrets, nil
+}
+
+
+func extractRequestSecrets(
+	request map[string]interface{},
+	prefix int,
+	secrets map[string]string,
+) error {
+
+	// Encrypt body
+	if body, exists := request["body"]; exists &&
+		body != nil {
+
+		bodyBytes, err := json.Marshal(body)
+		if err != nil {
+			return err
 		}
 
-		// Encrypt authorization header
-		if headersRaw, exists := request["headers"]; exists {
+		secretKey := fmt.Sprintf(
+			"step_%d_body",
+			prefix,
+		)
 
-			headers, ok := headersRaw.(map[string]interface{})
-			if ok {
+		secrets[secretKey] = string(bodyBytes)
 
-				if auth, exists := headers["Authorization"]; exists {
+		request["body"] =
+			"{{" + secretKey + "}}"
+	}
 
-					authString, ok := auth.(string)
-					if ok && authString != "" {
+	// Encrypt Authorization header
+	if headersRaw, exists := request["headers"];
+		exists {
 
-						secretKey := fmt.Sprintf(
-							"step_%d_authorization",
-							stepIndex,
-						)
+		headers, ok :=
+			headersRaw.(map[string]interface{})
 
-						secrets[secretKey] = authString
+		if ok {
 
-						headers["Authorization"] =
-							"{{" + secretKey + "}}"
-					}
+			if auth, exists :=
+				headers["Authorization"]; exists {
+
+				authString, ok := auth.(string)
+
+				if ok && authString != "" {
+
+					secretKey := fmt.Sprintf(
+						"step_%d_authorization",
+						prefix,
+					)
+
+					secrets[secretKey] =
+						authString
+
+					headers["Authorization"] =
+						"{{" + secretKey + "}}"
 				}
 			}
 		}
 	}
 
-	return config, secrets, nil
+	return nil
 }
+
+

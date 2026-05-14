@@ -8,6 +8,7 @@ import (
 	"api-monitoring-saas/internal/user"
 	"api-monitoring-saas/internal/ws"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -32,7 +33,7 @@ func SetupRouter() *gin.Engine {
 
 	monitorRepo := monitor.NewRepository()
 	secretRepo := monitor.NewSecretRepository()
-	monitorService := monitor.NewService(monitorRepo, secretRepo, "rishav")
+	monitorService := monitor.NewService(monitorRepo, secretRepo, os.Getenv("ENCRYPTION_KEY"),)
 	monitorHandler := monitor.NewHandler(monitorService)
 
 	analyticsRepo := analytics.NewRepository()
