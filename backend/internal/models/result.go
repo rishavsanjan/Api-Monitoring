@@ -9,5 +9,6 @@ type MonitorResult struct {
 	StatusCode     int
 	ResponseTimeMs int
 	PacketLoss     int `gorm:"default:null"`
+	ErrorMessage   string
 	CheckedAt      time.Time
 }

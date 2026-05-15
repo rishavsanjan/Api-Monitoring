@@ -168,7 +168,8 @@ const MonitorCard = () => {
             toast.error("Unable to upload!")
         },
         onSuccess: () => {
-            toast.success("Monitor uploaded successfully!")
+            toast.success("Monitor created successfully!")
+            setSuccessModel(true)
         }
     })
 
