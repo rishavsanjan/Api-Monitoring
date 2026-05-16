@@ -70,7 +70,20 @@ export interface MonitorPageResponse {
         totalLogs: number
         uptime: number
         avgLatency: number
-    }
+    },
+    logs: Log
+}
+
+export interface Log {
+    CreatedAt: Date,
+    ID: number,
+    Messages: {
+        message: string,
+        time: string,
+        type: "error" | "success"
+    }[]
+    MonitorID: string,
+    ResultID: number
 }
 
 export interface KeywordMonitorForm {
@@ -82,19 +95,19 @@ export interface KeywordMonitorForm {
     keyword: string;
     authorizationToken: string,
     requestBody: string
-    type : string
+    type: string
 }
 
 export interface PingMonitorForm {
     name: string;
     url: string;
     interval: number;
-    type : string
+    type: string
 }
 
 export interface User {
-    name : string,
-    email:string,
-    isVerified:boolean
+    name: string,
+    email: string,
+    isVerified: boolean
 }
 

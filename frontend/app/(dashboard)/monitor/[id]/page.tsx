@@ -3,6 +3,7 @@
 import { IconChevronRight, IconEdit, IconPlay, IconTrendDown, IconTrendUp } from "@/app/components/icons/icons";
 import EditMonitorModal from "@/app/components/layout/EditMonitorModal";
 import HistoryTable from "@/app/components/layout/HistoryTable";
+import LogsSection from "@/app/components/layout/MonitorLog";
 import PerformanceChart from "@/app/components/layout/PerformanceChart";
 import api from "@/lib/axios";
 import { MonitorHistory, MonitorPageResponse } from "@/type/props";
@@ -69,6 +70,8 @@ export default function MonitorDetailPage() {
             return response.data as MonitorPageResponse
         }
     })
+
+    console.log(data)
 
 
 
@@ -200,7 +203,7 @@ export default function MonitorDetailPage() {
                                     {
                                         checkingNow ?
                                             <>
-                                                <ClipLoader color="white" size={20}/>
+                                                <ClipLoader color="white" size={20} />
                                             </>
                                             :
                                             <>
@@ -226,20 +229,25 @@ export default function MonitorDetailPage() {
                             <StatCard label="Avg. Latency" value={`${String(data.stats.avgLatency.toFixed(0))} ms`} delta="+12ms" deltaPositive={false} />
                             <StatCard label="Total Checks" value={`${String(data.stats.totalLogs)}`} delta="Scheduled" deltaPositive={null} />
                         </div>
+                        
+                        {/* Performance Chart */}
+                        <PerformanceChart data={data.chartData} monitorId={data.monitor.ID} />
 
-                        <PerformanceChart  data={data.chartData} monitorId={data.monitor.ID} />
 
+                        {/* Logs */}
+                         <LogsSection logs={data.logs} /> 
 
                         {/* History */}
                         <HistoryTable history={data?.history ?? []} />
-                         {showModal &&
+
+                        {showModal &&
                             <EditMonitorModal
                                 name={data.monitor.Name}
                                 url={data.monitor.URL}
                                 interval={data.monitor.Interval}
                                 onClose={() => setShowModal(false)}
                                 monitorId={data.monitor.ID}
-                            />} 
+                            />}
                     </div>
                 </main>
             </div>

@@ -12,10 +12,11 @@ func NewRepository() *Repository {
 	return &Repository{}
 }
 
-func (r *Repository) GetMonitorResults(monitorId string) ([]models.MonitorResult, models.Monitor, float64, float64, int64, error) {
+func (r *Repository) GetMonitorResults(monitorId string) ([]models.MonitorResult, models.Monitor, models.MonitorLog, float64, float64, int64, error) {
 
 	var results []models.MonitorResult
 	var monitor models.Monitor
+	var monitorLogs models.MonitorLog
 
 	err := database.DB.
 		Where("monitor_id = ?", monitorId).
@@ -27,9 +28,16 @@ func (r *Repository) GetMonitorResults(monitorId string) ([]models.MonitorResult
 		Where("id = ?", monitorId).
 		Find(&monitor)
 
+	
+
 	if err != nil {
-		return nil, monitor, 0, 0, 0, err
+		return nil, monitor,monitorLogs, 0, 0, 0, err
 	}
+
+	database.DB.
+		Where("monitor_id = ?", monitorId).
+		First(&monitorLogs).
+		Order("created_at desc")
 
 	var totalLogs int64
 	database.DB.
@@ -62,7 +70,7 @@ func (r *Repository) GetMonitorResults(monitorId string) ([]models.MonitorResult
 		avgLatency = float64(totalResponseTime) / float64(upTimeLogs)
 	}
 
-	return results, monitor, uptime, avgLatency, totalLogs, nil
+	return results, monitor,monitorLogs, uptime, avgLatency, totalLogs, nil
 }
 
 type Result struct {

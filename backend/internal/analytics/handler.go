@@ -20,7 +20,7 @@ func (h *Handler) GetResults(c *gin.Context) {
 
 	id := c.Param("id")
 
-	results, monitor, uptime, avgLatency, totalLogs, err := h.service.GetResults(id)
+	results, monitor, logs, uptime, avgLatency, totalLogs, err := h.service.GetResults(id)
 	chartData := h.service.GetChart(id)
 
 	if err != nil {
@@ -37,6 +37,8 @@ func (h *Handler) GetResults(c *gin.Context) {
 			"uptime":     uptime,
 			"avgLatency": avgLatency,
 		},
+		"logs" : logs,
+		
 	})
 
 }
