@@ -6,7 +6,7 @@ import HistoryTable from "@/app/components/layout/HistoryTable";
 import LogsSection from "@/app/components/layout/MonitorLog";
 import PerformanceChart from "@/app/components/layout/PerformanceChart";
 import api from "@/lib/axios";
-import { MonitorHistory, MonitorPageResponse } from "@/type/props";
+import { LiveData, MonitorHistory, MonitorPageResponse } from "@/type/props";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { useParams, useRouter } from "next/navigation";
@@ -85,11 +85,11 @@ export default function MonitorDetailPage() {
         );
 
         socket.onmessage = async (event) => {
-            const data: MonitorHistory = JSON.parse(event.data);
+            const data: LiveData = JSON.parse(event.data);
             console.log("Live update:", data);
             const newPoint = {
-                time: getTimeFromISO(data.CheckedAt),
-                value: data.ResponseTimeMs
+                time: getTimeFromISO(data.history.CheckedAt),
+                value: data.history.ResponseTimeMs
             };
 
             await queryClient.cancelQueries({ queryKey: ["monitor-result", id] });
@@ -100,19 +100,22 @@ export default function MonitorDetailPage() {
                 ["monitor-result", id],
                 (old) => {
                     if (!old) return old;
-                    if (old.monitor.ID != data.MonitorID) {
+                    if (old.monitor.ID != data.history.MonitorID) {
                         return old;
                     }
-                    toast.success(`Response recieved : ${data.ResponseTimeMs}ms`)
+                    toast.success(`Response recieved : ${data.history.ResponseTimeMs}ms`)
 
                     return {
                         ...old,
-                        history: [data, ...old.history],
+                        history: [data.history, ...old.history],
                         stats: {
                             ...old.stats,
                             totalLogs: old.stats.totalLogs += 1
                         },
-                        chartData: [...old.chartData, newPoint]
+
+                        chartData: [...old.chartData, newPoint],
+                        log: data.log,
+
                     };
                 }
             );
@@ -229,13 +232,13 @@ export default function MonitorDetailPage() {
                             <StatCard label="Avg. Latency" value={`${String(data.stats.avgLatency.toFixed(0))} ms`} delta="+12ms" deltaPositive={false} />
                             <StatCard label="Total Checks" value={`${String(data.stats.totalLogs)}`} delta="Scheduled" deltaPositive={null} />
                         </div>
-                        
+
                         {/* Performance Chart */}
                         <PerformanceChart data={data.chartData} monitorId={data.monitor.ID} />
 
 
                         {/* Logs */}
-                         <LogsSection logs={data.logs} /> 
+                        <LogsSection logs={data.log} />
 
                         {/* History */}
                         <HistoryTable history={data?.history ?? []} />

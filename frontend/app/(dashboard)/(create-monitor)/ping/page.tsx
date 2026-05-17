@@ -43,8 +43,28 @@ const Toggle = ({
     </label>
 );
 
+interface FieldProps {
+    label: string;
+    description?: string;
+    error?: string;
+    children: React.ReactNode;
+}
 
 
+
+
+const Field = ({ label, description, error, children }: FieldProps) => (
+    <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
+            {label}
+        </label>
+        {children}
+        {description && !error && (
+            <p className="text-xs text-slate-500">{description}</p>
+        )}
+        {error && <p className="text-xs text-red-400">{error}</p>}
+    </div>
+);
 
 
 
@@ -86,6 +106,7 @@ export default function CreateMonitorPage() {
         const errs = validate();
         if (Object.keys(errs).length) { setErrors(errs); return; }
         setErrors({});
+
         addMonitorMutation.mutate();
     };
 
@@ -191,23 +212,39 @@ export default function CreateMonitorPage() {
 
                     {/* Basic Info */}
                     <FormSection title="Basic Info">
+                        <div>
+                            <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
+                                Name
+                            </label>
+                            <input
+                                placeholder="e.g. Website ping monitoring"
+                                onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
+                                className={`w-full bg-slate-800/60 border rounded-lg px-3 py-2.5 text-sm text-slate-100 placeholder-slate-500 outline-none transition-all
+                             focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/60
+                             ${errors.name ? "border-red-500/60 ring-2 ring-red-500/20" : "border-slate-700/80 hover:border-slate-600"}
+                            `}
+                            />
+                            <span className="text-red-400 text-xs ">{errors.name && 'Enter a name'}</span>
+                        </div>
 
-                        {/* <Input
-                            label="Name"
-                            placeholder="e.g. Host 1"
-                            value={form.name}
-                            onChange={(e) => setForm({ ...form, name: e.target.value })}
-                            error={errors.name}
-                        />
-                        <Input
-                            label="IP or host to monitor"
-                            type="url"
-                            placeholder="e.g. 80.123.70.58 or example.com"
-                            value={form.url}
-                            onChange={(e) => setForm({ ...form, url: e.target.value })}
-                            error={errors.url}
-                            prefixIcon={<IconLink />}
-                        /> */}
+                        <div>
+                            <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
+                                URL
+                            </label>
+                            <input
+                                placeholder="e.g. https://wwww.mywebsite.com"
+                                onChange={(e) => setForm(prev => ({ ...prev, url: e.target.value }))}
+                                className={`w-full bg-slate-800/60 border rounded-lg px-3 py-2.5 text-sm text-slate-100 placeholder-slate-500 outline-none transition-all
+                             focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/60
+                             ${errors.url ? "border-red-500/60 ring-2 ring-red-500/20" : "border-slate-700/80 hover:border-slate-600"}
+                            `}
+                            />
+                            <span className="text-red-400 text-xs ">{errors.url && 'Please enter a valid url'}</span>
+                        </div>
+
+
+
+
 
                         <FrequencySlider
                             value={form.interval}
@@ -219,12 +256,7 @@ export default function CreateMonitorPage() {
 
                     {/* Actions */}
                     <div className="flex items-center justify-end gap-3 pt-2">
-                        {/* <button
-                            
-                            className="px-6 py-2.5 text-sm font-semibold text-slate-400 hover:text-white transition-colors"
-                        >
-                            Cancel
-                        </button> */}
+
                         <button
                             onClick={() => {
                                 handleSubmit()

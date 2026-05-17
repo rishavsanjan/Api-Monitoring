@@ -38,6 +38,11 @@ export interface Stats {
     incidents: number
 }
 
+export interface LiveData{
+    history : MonitorHistory
+    log : Log
+}
+
 export interface MonitorHistory {
     CheckedAt: string,
     ID: number,
@@ -71,7 +76,7 @@ export interface MonitorPageResponse {
         uptime: number
         avgLatency: number
     },
-    logs: Log
+    log: Log
 }
 
 export interface Log {

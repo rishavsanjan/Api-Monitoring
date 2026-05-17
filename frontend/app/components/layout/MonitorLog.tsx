@@ -1,23 +1,12 @@
 "use client";
 
+import { Log } from "@/type/props";
 import { useState } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface Logs {
-    CreatedAt: Date;
-    ID: number;
-    Messages: {
-        message: string;
-        time: string;
-        type: "error" | "success";
-    }[];
-    MonitorID: string;
-    ResultID: number;
-}
-
 interface LogsSectionProps {
-    logs: Logs | null | undefined;
+    logs: Log | null | undefined;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

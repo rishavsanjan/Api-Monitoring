@@ -36,8 +36,9 @@ func (r *Repository) GetMonitorResults(monitorId string) ([]models.MonitorResult
 
 	database.DB.
 		Where("monitor_id = ?", monitorId).
-		First(&monitorLogs).
-		Order("created_at desc")
+		Order("created_at desc").
+		First(&monitorLogs)
+		
 
 	var totalLogs int64
 	database.DB.

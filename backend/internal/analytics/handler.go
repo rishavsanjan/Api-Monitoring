@@ -37,7 +37,7 @@ func (h *Handler) GetResults(c *gin.Context) {
 			"uptime":     uptime,
 			"avgLatency": avgLatency,
 		},
-		"logs" : logs,
+		"log" : logs,
 		
 	})
 

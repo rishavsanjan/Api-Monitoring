@@ -71,22 +71,32 @@ func RunMonitoringCycle() {
 
 				database.DB.Create(&result)
 
-				logs := models.MonitorLog{
+				log := models.MonitorLog{
 					MonitorID: m.ID,
 					ResultID:  result.ID,
 					Messages:  logMessage,
 					CreatedAt: time.Now(),
 				}
 
-				database.DB.Create(&logs)
-				msg, _ := json.Marshal(result)
-				ws.SendToUser(m.UserId, msg)
+				database.DB.Create(&log)
+				combined, err := json.Marshal(struct {
+					Result models.MonitorResult `json:"history"`
+					Log    models.MonitorLog    `json:"log"`
+				}{
+					Result: result,
+					Log:    log,
+				})
+				if err != nil {
+					return
+				}
+
+				ws.SendToUser(m.UserId, combined)
 
 			}(monitor)
 		case "ping":
 			go func(m models.Monitor) {
 				log.Println("checking ping : ")
-				status, latency, packetLoss, err := RunPingCheck(m, alertService)
+				status, latency, packetLoss, logMessage, err := RunPingCheck(m, alertService)
 				log.Println("stats : ")
 				log.Println(status, latency, packetLoss, err)
 				if err != nil {
@@ -104,9 +114,30 @@ func RunMonitoringCycle() {
 					CheckedAt:      time.Now(),
 					PacketLoss:     packetLoss,
 				}
+
+				log := models.MonitorLog{
+					MonitorID: m.ID,
+					ResultID:  result.ID,
+					Messages:  logMessage,
+					CreatedAt: time.Now(),
+				}
+
 				database.DB.Create(&result)
-				msg, _ := json.Marshal(result)
-				ws.SendToUser(m.UserId, msg)
+				database.DB.Create(&log)
+				combined, err := json.Marshal(struct {
+					Result models.MonitorResult `json:"history"`
+					Log    models.MonitorLog    `json:"log"`
+				}{
+					Result: result,
+					Log:    log,
+				})
+				if err != nil {
+					return
+				}
+
+				ws.SendToUser(m.UserId, combined)
+
+				
 			}(monitor)
 		case "synthetic":
 			go func(m models.Monitor) {
@@ -239,8 +270,18 @@ func replaceVariables(
 		},
 	)
 }
-
 func checkHttpMonitor(monitor models.Monitor, alertService *alert.Service) {
+
+	var logs []models.LogMessage
+
+	log.Println("===================================")
+	log.Println("RUNNING HTTP MONITOR")
+	AddLogHelper("RUNNING HTTP MONITOR", "success", &logs)
+	log.Println("Monitor ID:", monitor.ID)
+	AddLogHelper(fmt.Sprintf("Monitor ID: %s", monitor.ID), "success", &logs)
+	log.Println("Monitor URL:", monitor.URL)
+	AddLogHelper(fmt.Sprintf("Monitor URL: %s", monitor.URL), "success", &logs)
+	log.Println("===================================")
 
 	start := time.Now()
 
@@ -248,22 +289,40 @@ func checkHttpMonitor(monitor models.Monitor, alertService *alert.Service) {
 		Timeout: 10 * time.Second,
 	}
 
+	log.Println("🚀 Sending request...")
+	AddLogHelper("🚀 Sending request...", "success", &logs)
+
 	response, err := client.Get(monitor.URL)
 
 	responseTime := time.Since(start).Milliseconds()
 
 	status := "DOWN"
 	statusCode := 0
-	if err == nil {
 
+	if err != nil {
+		log.Println("❌ REQUEST ERROR:", err)
+		AddLogHelper(fmt.Sprintf("❌ REQUEST ERROR: %s", err), "error", &logs)
+	} else {
 		statusCode = response.StatusCode
+		log.Println("✅ Response received:", statusCode)
+		AddLogHelper(fmt.Sprintf("✅ Response received: %d", statusCode), "success", &logs)
 
 		if response.StatusCode == monitor.ExpectedStatus {
 			status = "UP"
+			log.Println("✅ Status matched expected:", monitor.ExpectedStatus)
+			AddLogHelper(fmt.Sprintf("✅ Status matched expected: %d", monitor.ExpectedStatus), "success", &logs)
+		} else {
+			log.Println("❌ STATUS MISMATCH: expected:", monitor.ExpectedStatus, "got:", statusCode)
+			AddLogHelper(fmt.Sprintf("❌ STATUS MISMATCH: expected: %d got: %d", monitor.ExpectedStatus, statusCode), "error", &logs)
 		}
 
 		response.Body.Close()
 	}
+
+	log.Println("✅ FINAL STATUS:", status)
+	AddLogHelper(fmt.Sprintf("✅ FINAL STATUS: %s", status), "success", &logs)
+	log.Println("⏱ RESPONSE TIME:", responseTime, "ms")
+	AddLogHelper(fmt.Sprintf("⏱ RESPONSE TIME: %d ms", responseTime), "success", &logs)
 
 	alertService.HandleStatusChange(monitor.ID, status)
 
@@ -276,9 +335,30 @@ func checkHttpMonitor(monitor models.Monitor, alertService *alert.Service) {
 	}
 
 	database.DB.Create(&result)
+	log.Println("✅ Result saved to database")
+	AddLogHelper("✅ Result saved to database", "success", &logs)
 
-	msg, _ := json.Marshal(result)
-	ws.SendToUser(monitor.UserId, msg)
+	log := models.MonitorLog{
+		MonitorID: monitor.ID,
+		ResultID:  result.ID,
+		Messages:  logs,
+		CreatedAt: time.Now(),
+	}
+
+	database.DB.Create(&log)
+
+	combined, err := json.Marshal(struct {
+		Result models.MonitorResult `json:"history"`
+		Log    models.MonitorLog    `json:"log"`
+	}{
+		Result: result,
+		Log:    log,
+	})
+	if err != nil {
+		return
+	}
+
+	ws.SendToUser(monitor.UserId, combined)
 
 }
 
@@ -594,17 +674,37 @@ type PingConfig struct {
 func RunPingCheck(
 	monitor models.Monitor,
 	alertService *alert.Service,
-) (string, int64, int, error) {
+
+) (string, int64, int, []models.LogMessage, error) {
+
+	var logs []models.LogMessage
+
+	log.Println("===================================")
+	log.Println("RUNNING PING MONITOR")
+	AddLogHelper("RUNNING PING MONITOR", "success", &logs)
+	log.Println("Monitor ID:", monitor.ID)
+	AddLogHelper(fmt.Sprintf("Monitor ID: %s", monitor.ID), "success", &logs)
+	log.Println("Monitor URL:", monitor.URL)
+	AddLogHelper(fmt.Sprintf("Monitor URL: %s", monitor.URL), "success", &logs)
+	log.Println("===================================")
 
 	var cfg PingConfig
 	if err := json.Unmarshal(monitor.Config, &cfg); err != nil {
-		return "DOWN", 0, 0, err
+		log.Println("❌ CONFIG PARSE ERROR:", err)
+		AddLogHelper(fmt.Sprintf("❌ CONFIG PARSE ERROR: %s", err), "error", &logs)
+		return "DOWN", 0, 0, logs, err
 	}
+
+	log.Println("✅ Config parsed successfully")
+	AddLogHelper("✅ Config parsed successfully", "success", &logs)
 
 	// 🔹 Defaults
 	if cfg.Attempts == 0 {
 		cfg.Attempts = 5
 	}
+
+	log.Println("Ping attempts:", cfg.Attempts)
+	AddLogHelper(fmt.Sprintf("Ping attempts: %d", cfg.Attempts), "success", &logs)
 
 	host := cfg.Host
 	if host == "" {
@@ -617,47 +717,67 @@ func RunPingCheck(
 	host = strings.Split(host, "/")[0]
 
 	log.Println("System ping host:", host)
+	AddLogHelper(fmt.Sprintf("System ping host: %s", host), "success", &logs)
 
 	// 🔹 OS-specific command
 	var cmd *exec.Cmd
 
 	if runtime.GOOS == "windows" {
 		cmd = exec.Command("ping", "-n", strconv.Itoa(cfg.Attempts), host)
+		log.Println("🖥️ Using Windows ping command")
+		AddLogHelper("🖥️ Using Windows ping command", "success", &logs)
 	} else {
 		cmd = exec.Command("ping", "-c", strconv.Itoa(cfg.Attempts), host)
+		log.Println("🐧 Using Linux ping command")
+		AddLogHelper("🐧 Using Linux ping command", "success", &logs)
 	}
 
-	//start := time.Now()
+	log.Println("🚀 Executing ping...")
+	AddLogHelper("🚀 Executing ping...", "success", &logs)
+
 	output, err := cmd.CombinedOutput()
-	//duration := time.Since(start).Milliseconds()
 
 	if err != nil {
-		log.Println("ping command error:", err)
+		log.Println("❌ Ping command error:", err)
+		AddLogHelper(fmt.Sprintf("❌ Ping command error: %s", err), "error", &logs)
 	}
 
 	outStr := string(output)
 	log.Println("PING OUTPUT:\n", outStr)
+	AddLogHelper(fmt.Sprintf("PING OUTPUT:\n%s", outStr), "success", &logs)
 
 	// 🔍 Extract packet loss
 	packetLoss := extractPacketLoss(outStr)
+	log.Println("📦 Packet loss:", packetLoss, "%")
+	AddLogHelper(fmt.Sprintf("📦 Packet loss: %d%%", packetLoss), "success", &logs)
 
 	// 🔍 Extract avg latency
 	avgLatency := extractAvgLatency(outStr)
+	log.Println("⏱ Avg latency:", avgLatency, "ms")
+	AddLogHelper(fmt.Sprintf("⏱ Avg latency: %d ms", avgLatency), "success", &logs)
 
 	status := "UP"
 
 	if packetLoss == 100 {
 		status = "DOWN"
+		log.Println("❌ 100% packet loss — host unreachable")
+		AddLogHelper("❌ 100% packet loss — host unreachable", "error", &logs)
 	} else if packetLoss > 50 {
 		status = "DOWN"
+		log.Println("❌ Packet loss above 50% — marking as DOWN")
+		AddLogHelper(fmt.Sprintf("❌ Packet loss above 50%% (%d%%) — marking as DOWN", packetLoss), "error", &logs)
 	}
+
+	log.Println("✅ FINAL STATUS:", status)
+	AddLogHelper(fmt.Sprintf("✅ FINAL STATUS: %s", status), "success", &logs)
 
 	alertService.HandleStatusChange(monitor.ID, status)
 
 	log.Printf("Ping Result → Host: %s | Loss: %d%% | Avg Latency: %dms\n",
 		host, packetLoss, avgLatency)
+	AddLogHelper(fmt.Sprintf("Ping Result → Host: %s | Loss: %d%% | Avg Latency: %dms", host, packetLoss, avgLatency), "success", &logs)
 
-	return status, avgLatency, packetLoss, nil
+	return status, avgLatency, packetLoss, logs, nil
 }
 
 func extractPacketLoss(output string) int {
