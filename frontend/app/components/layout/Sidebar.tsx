@@ -14,7 +14,7 @@ type NavItem = {
 const navItems: NavItem[] = [
     { label: "Dashboard", icon: <IconDashboard />, link: '/dashboard' },
     { label: "Monitors", icon: <IconMonitors />, link: '/dashboard' },
-    { label: "Incidents", icon: <IconIncidents />, link: '/dashboard/create-monitor' },
+    { label: "Incidents", icon: <IconIncidents />, link: '/incidents' },
     { label: "Create", icon: <IconPlus />, link: '/http' },
     { label: "Profile", icon: <IconUser />, link: '/profile' },
     { label: "Settings", icon: <IconSettings />, link: '/create-monitor' },

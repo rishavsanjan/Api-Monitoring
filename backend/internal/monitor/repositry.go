@@ -218,3 +218,48 @@ func (r *Repository) GetMonitorHistory(userId string, page int, monitorId string
 
 	return results, nil
 }
+
+func (r *Repository) GetIncidents(userId string, page int) ([]models.MonitorResult, error) {
+	limit := 5
+
+	offset := (page - 1) * limit
+	var monitors []models.Monitor
+	var results []models.MonitorResult
+
+	err := database.DB.
+		Model(&models.Monitor{}).
+		Select("id").
+		Where("user_id = ?", userId).
+		Limit(limit).
+		Offset(offset).
+		Find(&monitors).
+		Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, m := range monitors {
+
+		var result models.MonitorResult
+		err = database.DB.
+			Where("monitor_id = ?", m.ID).
+			Order("checked_at DESC").
+			First(&result).
+			Error
+
+		if err != nil {
+			continue
+		}
+
+		if result.Status == "DOWN" {
+			results = append(results, result)
+		}
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}

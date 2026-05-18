@@ -1,70 +1,57 @@
 "use client"
-import { useState } from "react";
+import api from "@/lib/axios";
+import { useQuery } from "@tanstack/react-query";
+import { JSX, useState } from "react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 type IncidentStatus = "investigating" | "identified" | "monitoring" | "resolved";
-type IncidentSeverity = "critical" | "major" | "minor";
 
 interface Incident {
   id: string;
   title: string;
-  service: string;
   status: IncidentStatus;
-  severity: IncidentSeverity;
   duration: string;
   startedAt: string;
 }
 
 type NavItem = { id: string; label: string; icon: JSX.Element };
 type FilterStatus = "all" | IncidentStatus;
-type FilterSeverity = "all" | IncidentSeverity;
-
 // ── Data ───────────────────────────────────────────────────────────────────────
 
 const INCIDENTS: Incident[] = [
   {
     id: "INC-0041",
     title: "API Gateway Latency Spike",
-    service: "prod-us-east-1 / gateway-service",
     status: "investigating",
-    severity: "critical",
     duration: "42m 12s",
     startedAt: "Today, 14:22 UTC",
   },
   {
     id: "INC-0040",
     title: "Auth Service Database Connection Timeout",
-    service: "auth-service / postgres-primary",
     status: "identified",
-    severity: "major",
     duration: "1h 05m",
     startedAt: "Today, 13:59 UTC",
   },
   {
     id: "INC-0039",
     title: "Storage Node Rebalancing Failure",
-    service: "storage-cluster-04 / s3-compat",
     status: "resolved",
-    severity: "minor",
     duration: "24m 10s",
     startedAt: "Oct 24, 09:12 UTC",
   },
   {
     id: "INC-0038",
     title: "Inbound Webhook Delay",
-    service: "event-bus / ingress-v2",
     status: "resolved",
-    severity: "minor",
     duration: "8m 44s",
     startedAt: "Oct 23, 22:45 UTC",
   },
   {
     id: "INC-0037",
     title: "CDN Cache Purge Failure",
-    service: "cdn-edge / cache-service",
     status: "resolved",
-    severity: "minor",
     duration: "15m 30s",
     startedAt: "Oct 22, 18:00 UTC",
   },
@@ -179,44 +166,45 @@ const STATUS_STYLES: Record<IncidentStatus, { badge: string; dot: string; label:
   },
 };
 
-const SEVERITY_STYLES: Record<IncidentSeverity, { dot: string; label: string; text: string }> = {
-  critical: { dot: "bg-red-500", label: "Critical", text: "text-slate-300" },
-  major: { dot: "bg-orange-500", label: "Major", text: "text-slate-300" },
-  minor: { dot: "bg-slate-500", label: "Minor", text: "text-slate-400" },
-};
-
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function IncidentsDashboard() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
-  const [severityFilter, setSeverityFilter] = useState<FilterSeverity>("all");
   const [currentPage, setCurrentPage] = useState(1);
 
   const TOTAL_PAGES = 3;
 
   const filtered = INCIDENTS.filter((inc) => {
     const matchSearch =
-      inc.title.toLowerCase().includes(search.toLowerCase()) ||
-      inc.service.toLowerCase().includes(search.toLowerCase());
+      inc.title.toLowerCase().includes(search.toLowerCase())
     const matchStatus = statusFilter === "all" || inc.status === statusFilter;
-    const matchSeverity = severityFilter === "all" || inc.severity === severityFilter;
-    return matchSearch && matchStatus && matchSeverity;
+    return matchSearch && matchStatus;
   });
 
   const activeCount = INCIDENTS.filter((i) => i.status !== "resolved").length;
   const resolvedCount = INCIDENTS.filter((i) => i.status === "resolved").length;
 
+  const { data } = useQuery({
+    queryKey: ['monitors', currentPage],
+
+    queryFn: async () => {
+      const res = await api.get(`/api/monitors/incidents?page=${currentPage}&limit=${5}`);
+      console.log(res.data)
+      return res.data.monitors;
+    },
+    staleTime: 60000,
+    gcTime: 10 * 60 * 1000,
+    refetchInterval: 60000
+  })
+
   return (
     <div className="bg-[#101722] text-slate-100 min-h-screen font-sans flex relative">
       {/* Ambient glow */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-blue-500/5 blur-[120px] rounded-full pointer-events-none z-0" />
-
-      {/* ── Sidebar ── */}
-      
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full  bg-blue-500/5 blur-[120px] rounded-full pointer-events-none z-0" />
 
       {/* ── Main ── */}
-      <main className="ml-64 flex-1 min-h-screen relative z-10">
+      <main className=" flex-1 min-h-screen relative z-10">
         {/* Top nav */}
         <header className="fixed top-0 left-64 right-0 z-40 bg-slate-900/50 backdrop-blur-md h-16 px-8 flex justify-between items-center border-b border-white/5">
           <div className="relative">
@@ -315,16 +303,7 @@ export default function IncidentsDashboard() {
 
               {/* Severity filter */}
               <div className="relative">
-                <select
-                  value={severityFilter}
-                  onChange={(e) => setSeverityFilter(e.target.value as FilterSeverity)}
-                  className="bg-[#1e293b] border border-white/5 px-4 py-2 pl-8 rounded-lg text-sm font-medium text-slate-300 focus:ring-1 focus:ring-blue-500 outline-none appearance-none cursor-pointer pr-8"
-                >
-                  <option value="all">Severity: All</option>
-                  <option value="critical">Critical</option>
-                  <option value="major">Major</option>
-                  <option value="minor">Minor</option>
-                </select>
+
                 <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                     <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
@@ -337,9 +316,7 @@ export default function IncidentsDashboard() {
               <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Resolved: {resolvedCount}</span>
             </div>
 
-            <button className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-bold transition-all active:scale-95 flex items-center gap-2 shadow-lg shadow-blue-500/20">
-              {Icons.add} Create Incident
-            </button>
+
           </div>
 
           {/* Table */}
@@ -348,7 +325,7 @@ export default function IncidentsDashboard() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-900/30">
-                    {["Incident & Service", "Status", "Severity", "Duration / Started", ""].map((h) => (
+                    {["Incident & Service", "Status", "Duration / Started", ""].map((h) => (
                       <th
                         key={h}
                         className={`px-6 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-widest ${h === "" ? "text-right" : ""}`}
@@ -368,14 +345,13 @@ export default function IncidentsDashboard() {
                   ) : (
                     filtered.map((inc) => {
                       const s = STATUS_STYLES[inc.status];
-                      const sev = SEVERITY_STYLES[inc.severity];
+
                       const isResolved = inc.status === "resolved";
                       return (
                         <tr key={inc.id} className={`hover:bg-white/[0.02] transition-colors group ${isResolved ? "opacity-70 hover:opacity-100" : ""}`}>
                           <td className="px-6 py-5">
                             <div className="flex flex-col">
                               <span className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">{inc.title}</span>
-                              <span className="text-xs font-mono text-slate-500 mt-1">{inc.service}</span>
                             </div>
                           </td>
                           <td className="px-6 py-5">
@@ -384,12 +360,7 @@ export default function IncidentsDashboard() {
                               {s.label}
                             </div>
                           </td>
-                          <td className="px-6 py-5">
-                            <div className="flex items-center gap-2">
-                              <span className={`w-2 h-2 rounded-full ${sev.dot}`} />
-                              <span className={`text-sm font-medium ${sev.text}`}>{sev.label}</span>
-                            </div>
-                          </td>
+
                           <td className="px-6 py-5">
                             <div className="flex flex-col">
                               <span className="text-sm font-bold text-white">{inc.duration}</span>
@@ -424,11 +395,10 @@ export default function IncidentsDashboard() {
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`w-8 h-8 flex items-center justify-center rounded text-xs font-bold transition-colors ${
-                      currentPage === page
+                    className={`w-8 h-8 flex items-center justify-center rounded text-xs font-bold transition-colors ${currentPage === page
                         ? "bg-blue-500 text-white"
                         : "bg-slate-800 text-slate-400 hover:bg-slate-700"
-                    }`}
+                      }`}
                   >
                     {page}
                   </button>

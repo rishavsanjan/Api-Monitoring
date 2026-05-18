@@ -182,3 +182,29 @@ func (h *Handler) GetMonitorHistory(c *gin.Context) {
 		"history": history,
 	})
 }
+
+func (h *Handler) GetIncidents(c *gin.Context) {
+	userID := c.GetString("user_id")
+	pageStr := c.DefaultQuery("page", "1")
+	page, err := strconv.Atoi(pageStr)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid page number: " + err.Error()})
+		return
+	}
+	if page < 1 {
+		page = 1
+	}
+
+	incidents, err := h.service.GetIncidents(userID, page)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "unable to find incidents"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"incidents": incidents,
+	})
+}
+
