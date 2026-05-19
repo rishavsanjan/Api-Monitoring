@@ -137,6 +137,8 @@ func (s *Service) GetMonitorHistory(userId string, page int, monitorId string) (
 	return s.repo.GetMonitorHistory(userId, page, monitorId)
 }
 
+
+
 func (s *Service) GetIncidents(userId string, page int) ([]models.MonitorResult, error) {
 	return s.repo.GetIncidents(userId, page)
 }

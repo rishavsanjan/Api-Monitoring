@@ -1,63 +1,15 @@
 "use client"
 import api from "@/lib/axios";
+import { MonitorIncident } from "@/type/props";
 import { useQuery } from "@tanstack/react-query";
 import { JSX, useState } from "react";
+import { ClipLoader } from "react-spinners";
 
-// ── Types ──────────────────────────────────────────────────────────────────────
 
-type IncidentStatus = "investigating" | "identified" | "monitoring" | "resolved";
+type IncidentStatus = "DOWN" | "UP";
 
-interface Incident {
-  id: string;
-  title: string;
-  status: IncidentStatus;
-  duration: string;
-  startedAt: string;
-}
 
-type NavItem = { id: string; label: string; icon: JSX.Element };
 type FilterStatus = "all" | IncidentStatus;
-// ── Data ───────────────────────────────────────────────────────────────────────
-
-const INCIDENTS: Incident[] = [
-  {
-    id: "INC-0041",
-    title: "API Gateway Latency Spike",
-    status: "investigating",
-    duration: "42m 12s",
-    startedAt: "Today, 14:22 UTC",
-  },
-  {
-    id: "INC-0040",
-    title: "Auth Service Database Connection Timeout",
-    status: "identified",
-    duration: "1h 05m",
-    startedAt: "Today, 13:59 UTC",
-  },
-  {
-    id: "INC-0039",
-    title: "Storage Node Rebalancing Failure",
-    status: "resolved",
-    duration: "24m 10s",
-    startedAt: "Oct 24, 09:12 UTC",
-  },
-  {
-    id: "INC-0038",
-    title: "Inbound Webhook Delay",
-    status: "resolved",
-    duration: "8m 44s",
-    startedAt: "Oct 23, 22:45 UTC",
-  },
-  {
-    id: "INC-0037",
-    title: "CDN Cache Purge Failure",
-    status: "resolved",
-    duration: "15m 30s",
-    startedAt: "Oct 22, 18:00 UTC",
-  },
-];
-
-// ── Icons ──────────────────────────────────────────────────────────────────────
 
 const Icons = {
   dashboard: (
@@ -137,28 +89,17 @@ const Icons = {
   ),
 };
 
-// ── Status / Severity helpers ─────────────────────────────────────────────────
 
 const STATUS_STYLES: Record<IncidentStatus, { badge: string; dot: string; label: string; pulse: boolean }> = {
-  investigating: {
-    badge: "bg-yellow-900/40 text-yellow-400 border border-yellow-400/20",
-    dot: "bg-yellow-400",
-    label: "Investigating",
-    pulse: true,
-  },
-  identified: {
-    badge: "bg-orange-900/40 text-orange-400 border border-orange-400/20",
-    dot: "bg-orange-400",
+
+  DOWN: {
+    badge: "bg-red-900/40 text-red-400 border border-red-400/20",
+    dot: "bg-red-400",
     label: "Identified",
     pulse: false,
   },
-  monitoring: {
-    badge: "bg-blue-900/40 text-blue-400 border border-blue-400/20",
-    dot: "bg-blue-400",
-    label: "Monitoring",
-    pulse: true,
-  },
-  resolved: {
+
+  UP: {
     badge: "bg-emerald-900/40 text-emerald-400 border border-emerald-400/20",
     dot: "bg-emerald-400",
     label: "Resolved",
@@ -175,28 +116,40 @@ export default function IncidentsDashboard() {
 
   const TOTAL_PAGES = 3;
 
-  const filtered = INCIDENTS.filter((inc) => {
-    const matchSearch =
-      inc.title.toLowerCase().includes(search.toLowerCase())
-    const matchStatus = statusFilter === "all" || inc.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
 
-  const activeCount = INCIDENTS.filter((i) => i.status !== "resolved").length;
-  const resolvedCount = INCIDENTS.filter((i) => i.status === "resolved").length;
 
-  const { data } = useQuery({
+  // const activeCount = INCIDENTS.filter((i) => i.status !== "resolved").length;
+  // const resolvedCount = INCIDENTS.filter((i) => i.status === "resolved").length;
+
+  const { data, isPending } = useQuery({
     queryKey: ['monitors', currentPage],
 
     queryFn: async () => {
       const res = await api.get(`/api/monitors/incidents?page=${currentPage}&limit=${5}`);
       console.log(res.data)
-      return res.data.monitors;
+      return res.data.incidents as MonitorIncident[];
     },
     staleTime: 60000,
     gcTime: 10 * 60 * 1000,
     refetchInterval: 60000
   })
+
+
+
+
+  if (isPending || !data) {
+    return (
+      <ClipLoader />
+    )
+
+  }
+
+  const filtered = data.filter((inc) => {
+    const matchSearch =
+      inc.MonitorName.toLowerCase().includes(search.toLowerCase())
+    const matchStatus = statusFilter === "all" || inc.Status === statusFilter;
+    return matchSearch && matchStatus;
+  });
 
   return (
     <div className="bg-[#101722] text-slate-100 min-h-screen font-sans flex relative">
@@ -243,7 +196,7 @@ export default function IncidentsDashboard() {
               <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Open Incidents</p>
               <div className="flex items-end justify-between">
                 <span className="text-4xl font-black text-white leading-none">
-                  {String(activeCount).padStart(2, "0")}
+                  {String(data?.length).padStart(2, "0")}
                 </span>
                 <span className="text-xs font-medium text-red-400 flex items-center gap-1">
                   {Icons.trendUp} +2 this hour
@@ -293,10 +246,9 @@ export default function IncidentsDashboard() {
                   className="bg-[#1e293b] border border-white/5 px-4 py-2 pl-8 rounded-lg text-sm font-medium text-slate-300 focus:ring-1 focus:ring-blue-500 outline-none appearance-none cursor-pointer pr-8"
                 >
                   <option value="all">Status: All</option>
-                  <option value="investigating">Investigating</option>
-                  <option value="identified">Identified</option>
-                  <option value="monitoring">Monitoring</option>
-                  <option value="resolved">Resolved</option>
+                  <option value="UP">UP</option>
+                  <option value="DOWN">DOWN</option>
+                  
                 </select>
                 <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">{Icons.filter}</span>
               </div>
@@ -312,8 +264,8 @@ export default function IncidentsDashboard() {
               </div>
 
               <div className="h-6 w-px bg-white/10 mx-1" />
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Active: {activeCount}</span>
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Resolved: {resolvedCount}</span>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Active: {data?.length}</span>
+              {/* <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Resolved: {resolvedCount}</span> */}
             </div>
 
 
@@ -344,14 +296,14 @@ export default function IncidentsDashboard() {
                     </tr>
                   ) : (
                     filtered.map((inc) => {
-                      const s = STATUS_STYLES[inc.status];
+                      const s = STATUS_STYLES[inc.Status];
 
-                      const isResolved = inc.status === "resolved";
+                      const isResolved = inc.Status === "UP";
                       return (
-                        <tr key={inc.id} className={`hover:bg-white/[0.02] transition-colors group ${isResolved ? "opacity-70 hover:opacity-100" : ""}`}>
+                        <tr key={inc.ID} className={`hover:bg-white/[0.02] transition-colors group ${isResolved ? "opacity-70 hover:opacity-100" : ""}`}>
                           <td className="px-6 py-5">
                             <div className="flex flex-col">
-                              <span className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">{inc.title}</span>
+                              <span className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">{inc.MonitorName}</span>
                             </div>
                           </td>
                           <td className="px-6 py-5">
@@ -363,8 +315,8 @@ export default function IncidentsDashboard() {
 
                           <td className="px-6 py-5">
                             <div className="flex flex-col">
-                              <span className="text-sm font-bold text-white">{inc.duration}</span>
-                              <span className="text-[10px] text-slate-500 uppercase mt-0.5">{inc.startedAt}</span>
+                              {/*  <span className="text-sm font-bold text-white">{inc.duration}</span> */}
+                              <span className="text-[10px] text-slate-500 uppercase mt-0.5">{inc.CheckedAt}</span>
                             </div>
                           </td>
                           <td className="px-6 py-5 text-right">
@@ -396,8 +348,8 @@ export default function IncidentsDashboard() {
                     key={page}
                     onClick={() => setCurrentPage(page)}
                     className={`w-8 h-8 flex items-center justify-center rounded text-xs font-bold transition-colors ${currentPage === page
-                        ? "bg-blue-500 text-white"
-                        : "bg-slate-800 text-slate-400 hover:bg-slate-700"
+                      ? "bg-blue-500 text-white"
+                      : "bg-slate-800 text-slate-400 hover:bg-slate-700"
                       }`}
                   >
                     {page}

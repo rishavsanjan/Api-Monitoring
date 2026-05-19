@@ -137,7 +137,6 @@ func RunMonitoringCycle() {
 
 				ws.SendToUser(m.UserId, combined)
 
-				
 			}(monitor)
 		case "synthetic":
 			go func(m models.Monitor) {
@@ -273,6 +272,9 @@ func replaceVariables(
 func checkHttpMonitor(monitor models.Monitor, alertService *alert.Service) {
 
 	var logs []models.LogMessage
+	var errorMessage string
+
+	errorMessage = ""
 
 	log.Println("===================================")
 	log.Println("RUNNING HTTP MONITOR")
@@ -302,6 +304,7 @@ func checkHttpMonitor(monitor models.Monitor, alertService *alert.Service) {
 	if err != nil {
 		log.Println("❌ REQUEST ERROR:", err)
 		AddLogHelper(fmt.Sprintf("❌ REQUEST ERROR: %s", err), "error", &logs)
+		errorMessage = (fmt.Sprintf("❌ REQUEST ERROR: %s", err))
 	} else {
 		statusCode = response.StatusCode
 		log.Println("✅ Response received:", statusCode)
@@ -314,6 +317,7 @@ func checkHttpMonitor(monitor models.Monitor, alertService *alert.Service) {
 		} else {
 			log.Println("❌ STATUS MISMATCH: expected:", monitor.ExpectedStatus, "got:", statusCode)
 			AddLogHelper(fmt.Sprintf("❌ STATUS MISMATCH: expected: %d got: %d", monitor.ExpectedStatus, statusCode), "error", &logs)
+			errorMessage = (fmt.Sprintf("❌ STATUS MISMATCH: expected: %d got: %d", monitor.ExpectedStatus, statusCode))
 		}
 
 		response.Body.Close()
@@ -332,6 +336,7 @@ func checkHttpMonitor(monitor models.Monitor, alertService *alert.Service) {
 		StatusCode:     statusCode,
 		ResponseTimeMs: int(responseTime),
 		CheckedAt:      time.Now(),
+		ErrorMessage:   errorMessage,
 	}
 
 	database.DB.Create(&result)

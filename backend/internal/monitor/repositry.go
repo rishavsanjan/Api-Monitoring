@@ -219,7 +219,10 @@ func (r *Repository) GetMonitorHistory(userId string, page int, monitorId string
 	return results, nil
 }
 
+
+
 func (r *Repository) GetIncidents(userId string, page int) ([]models.MonitorResult, error) {
+
 	limit := 5
 
 	offset := (page - 1) * limit
@@ -228,7 +231,7 @@ func (r *Repository) GetIncidents(userId string, page int) ([]models.MonitorResu
 
 	err := database.DB.
 		Model(&models.Monitor{}).
-		Select("id").
+		Select("id", "name").
 		Where("user_id = ?", userId).
 		Limit(limit).
 		Offset(offset).
@@ -253,6 +256,9 @@ func (r *Repository) GetIncidents(userId string, page int) ([]models.MonitorResu
 		}
 
 		if result.Status == "DOWN" {
+			result.MonitorName = m.Name
+			
+
 			results = append(results, result)
 		}
 	}

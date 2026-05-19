@@ -38,9 +38,9 @@ export interface Stats {
     incidents: number
 }
 
-export interface LiveData{
-    history : MonitorHistory
-    log : Log
+export interface LiveData {
+    history: MonitorHistory
+    log: Log
 }
 
 export interface MonitorHistory {
@@ -115,4 +115,21 @@ export interface User {
     email: string,
     isVerified: boolean
 }
+
+export interface MonitorIncident {
+    ID: number;
+    MonitorID: string;
+    MonitorName: string;
+
+    Status: "UP" | "DOWN";
+    StatusCode: number;
+
+    ResponseTimeMs: number;
+    PacketLoss: number;
+
+    ErrorMessage: string;
+
+    CheckedAt: string;
+}
+
 

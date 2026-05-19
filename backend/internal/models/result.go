@@ -11,4 +11,6 @@ type MonitorResult struct {
 	PacketLoss     int `gorm:"default:null"`
 	ErrorMessage   string
 	CheckedAt      time.Time
+
+	MonitorName string `gorm:"-"`
 }
