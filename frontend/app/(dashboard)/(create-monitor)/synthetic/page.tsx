@@ -127,13 +127,14 @@ export default function CreateMonitorPage() {
     const handleSubmissionMutation = useMutation({
         mutationKey: ['create-monitor'],
         mutationFn: async () => {
+            console.log(monitors)
             const config = monitors.map((m) => {
                 const mustContainKeywords = m.keyword.split(",").map(item => item.trim()).filter(item => item.length > 0);
                 const path = `.$${m.extract.path}`
                 return {
                     name: m.name,
                     request: {
-                        url: m.url,
+                        url: m.url.trim(),
                         method: m.method,
                         body: m.body,
                         headers: {
@@ -144,14 +145,12 @@ export default function CreateMonitorPage() {
                         status: 200,
                         mustContain: mustContainKeywords
                     },
-                    extract: m.extract ? {
+                    extract: m.extract.path.length > 0 ? {
                         [m.extract.variableName]: path
-                    } : null
+                    } : {}
                 }
             })
-
-            console.log(config)
-            return;
+            
             await api.post(`/api/monitors`, {
                 name: monitorName,
                 URL: monitors[0].url,
