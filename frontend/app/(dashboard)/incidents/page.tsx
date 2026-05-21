@@ -2,6 +2,7 @@
 import api from "@/lib/axios";
 import { MonitorIncident } from "@/type/props";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { JSX, useState } from "react";
 import { ClipLoader } from "react-spinners";
 
@@ -116,7 +117,7 @@ export default function IncidentsDashboard() {
 
   const TOTAL_PAGES = 3;
 
-
+  const router = useRouter();
 
   // const activeCount = INCIDENTS.filter((i) => i.status !== "resolved").length;
   // const resolvedCount = INCIDENTS.filter((i) => i.status === "resolved").length;
@@ -248,7 +249,7 @@ export default function IncidentsDashboard() {
                   <option value="all">Status: All</option>
                   <option value="UP">UP</option>
                   <option value="DOWN">DOWN</option>
-                  
+
                 </select>
                 <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">{Icons.filter}</span>
               </div>
@@ -320,7 +321,11 @@ export default function IncidentsDashboard() {
                             </div>
                           </td>
                           <td className="px-6 py-5 text-right">
-                            <button className="inline-flex items-center text-xs font-bold text-blue-400 hover:text-white transition-colors gap-1">
+                            <button
+                              onClick={() => {
+                                router.push(`/incident/${inc.ID}`)
+                              }}
+                              className="inline-flex items-center text-xs font-bold text-blue-400 hover:text-white transition-colors gap-1">
                               View Details {Icons.chevronRight}
                             </button>
                           </td>
