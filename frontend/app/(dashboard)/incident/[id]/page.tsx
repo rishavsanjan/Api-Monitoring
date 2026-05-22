@@ -1,5 +1,14 @@
 "use client"
+import IncidentHeader from "@/app/components/layout/IncidentHeader";
+import LogsSection from "@/app/components/layout/MonitorLog";
+import PerformanceChart from "@/app/components/layout/PerformanceChart";
+import api from "@/lib/axios";
+import { timeAgo } from "@/lib/helper";
+import { MonitorPageResponse } from "@/type/props";
+import { useQuery } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
 import { useState, useEffect, useRef, JSX } from "react";
+import { ClipLoader } from "react-spinners";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -89,42 +98,14 @@ const Ic = {
 
 // ── Log level helpers ─────────────────────────────────────────────────────────
 
-const LOG_STYLES: Record<LogEntry["level"], { label: string; color: string; icon: JSX.Element }> = {
-  info: {
-    label: "[info]",
-    color: "text-blue-400",
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="#3c83f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mt-0.5 shrink-0"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>,
-  },
-  success: {
-    label: "[success]",
-    color: "text-emerald-400",
-    icon: <svg viewBox="0 0 24 24" fill="#10b981" className="w-4 h-4 mt-0.5 shrink-0"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>,
-  },
-  error: {
-    label: "[error]",
-    color: "text-red-400",
-    icon: <svg viewBox="0 0 24 24" fill="#ef4444" className="w-4 h-4 mt-0.5 shrink-0"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z" /></svg>,
-  },
-  fatal: {
-    label: "[fatal]",
-    color: "text-red-400",
-    icon: <svg viewBox="0 0 24 24" fill="#ef4444" className="w-4 h-4 mt-0.5 shrink-0"><path d="M11 15h2v2h-2zm0-8h2v6h-2zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" /></svg>,
-  },
-  alert: {
-    label: "[alert]",
-    color: "text-slate-400",
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mt-0.5 shrink-0"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 01-3.46 0" /></svg>,
-  },
-};
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
 
 function Toast({ message, visible }: { message: string; visible: boolean }) {
   return (
     <div
-      className={`fixed bottom-8 right-8 flex items-center gap-4 bg-[#064e3b] text-emerald-300 px-6 py-4 rounded-2xl border border-emerald-500/20 shadow-2xl z-[100] transition-all duration-300 ${
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8 pointer-events-none"
-      }`}
+      className={`fixed bottom-8 right-8 flex items-center gap-4 bg-[#064e3b] text-emerald-300 px-6 py-4 rounded-2xl border border-emerald-500/20 shadow-2xl z-[100] transition-all duration-300 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8 pointer-events-none"
+        }`}
     >
       {Ic.checkToast}
       <div className="flex flex-col">
@@ -135,52 +116,36 @@ function Toast({ message, visible }: { message: string; visible: boolean }) {
   );
 }
 
+
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function IncidentDetail() {
-  const [activeNav, setActiveNav] = useState("incidents");
-  const [resolved, setResolved] = useState(false);
   const [toast, setToast] = useState({ visible: false, message: "" });
   const [elapsedSeconds, setElapsedSeconds] = useState(14 * 60 + 32);
   const logRef = useRef<HTMLDivElement>(null);
+
+  const params = useParams();
+  const id = params.id as string;
+
 
   // Auto-scroll log to bottom on mount
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, []);
 
-  // Live duration counter
-  useEffect(() => {
-    const t = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
-    return () => clearInterval(t);
-  }, []);
+  const { data, isLoading } = useQuery({
+    queryKey: ['monitor-result', id],
+    queryFn: async () => {
+      const response = await api.get(`/api/monitors/${id}/results`)
+      return response.data as MonitorPageResponse
+    }
+  })
 
-  const formatDuration = (s: number) => {
-    const h = String(Math.floor(s / 3600)).padStart(2, "0");
-    const m = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
-    const sec = String(s % 60).padStart(2, "0");
-    return `${h}:${m}:${sec}`;
-  };
+  console.log(data)
 
-  const showToast = (message: string) => {
-    setToast({ visible: true, message });
-    setTimeout(() => setToast({ visible: false, message: "" }), 3000);
-  };
 
-  const handleRetry = () => showToast("Dispatching manual health check...");
 
-  const handleResolve = () => {
-    setResolved(true);
-    showToast("Incident status updated to RESOLVED.");
-  };
-
-  const NAV_ITEMS = [
-    { id: "dashboard", label: "Dashboard", icon: Ic.dashboard },
-    { id: "incidents", label: "Incidents", icon: Ic.warning },
-    { id: "services", label: "Services", icon: Ic.services },
-    { id: "logs", label: "Logs", icon: Ic.logs },
-    { id: "settings", label: "Settings", icon: Ic.settings },
-  ];
 
   const ACTIVITY: ActivityItem[] = [
     {
@@ -213,62 +178,24 @@ export default function IncidentDetail() {
     },
   ];
 
+  if (!data) {
+    return (
+      <div className="bg-[#101722] h-full items-center flex justify-center text-white">
+        <ClipLoader color="white" size={50} />
+      </div>
+    )
+
+  }
+
   return (
     <div className="bg-[#101722] text-slate-100 min-h-screen font-sans flex">
-      
+
 
       {/* ── Main ── */}
       <main className="p-8 min-h-screen flex-1">
         {/* Header */}
-        <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3 text-sm font-medium text-slate-400">
-              {Ic.services}
-              <span>Main API Gateway</span>
-              <span className="text-slate-600">/</span>
-              <span className="text-slate-500">INC-9421-A</span>
-            </div>
-            <h1 className="text-[30px] font-bold tracking-tight text-slate-100 leading-tight">
-              API Gateway Connection Timeout
-            </h1>
-            <div className="flex flex-wrap items-center gap-3 mt-3">
-              <span className="px-2.5 py-1 bg-[#7f1d1d] text-red-300 text-xs font-bold rounded-full flex items-center gap-1.5">
-                <span className={`w-2 h-2 rounded-full bg-red-500 ${!resolved ? "animate-pulse" : ""}`} />
-                {resolved ? "RESOLVED" : "DOWN"}
-              </span>
-              <span className="px-2.5 py-1 bg-[#334155] text-slate-100 text-xs font-bold rounded-md border border-[#1e293b]">
-                CRITICAL
-              </span>
-              <div className="h-4 w-px bg-[#334155] mx-1" />
-              <span className="text-slate-400 text-sm flex items-center gap-1.5">
-                {Ic.schedule} Started 14m ago
-              </span>
-              <span className="text-slate-400 text-sm flex items-center gap-1.5">
-                {Ic.timer} Duration: {formatDuration(elapsedSeconds)}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleRetry}
-              className="px-5 py-2.5 bg-[#1e293b] hover:bg-[#334155] text-slate-100 font-semibold text-sm rounded-xl transition-all active:scale-95 flex items-center gap-2"
-            >
-              {Ic.refresh} Retry Check
-            </button>
-            <button
-              onClick={handleResolve}
-              disabled={resolved}
-              className={`px-6 py-2.5 font-bold text-sm rounded-xl shadow-lg transition-all active:scale-95 flex items-center gap-2 ${
-                resolved
-                  ? "bg-emerald-600 text-white shadow-emerald-500/20 cursor-default"
-                  : "bg-blue-500 hover:bg-blue-600 text-white shadow-blue-500/20"
-              }`}
-            >
-              {Ic.check} {resolved ? "Resolved" : "Resolve Incident"}
-            </button>
-          </div>
-        </header>
+        <IncidentHeader monitor={data.monitor} logCreationTime={data.log.CreatedAt}/>
+        
 
         {/* Grid layout */}
         <div className="grid grid-cols-12 gap-6">
@@ -278,9 +205,9 @@ export default function IncidentDetail() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
                 { label: "Status Code", value: "504", sub: "Gateway Timeout", subColor: "text-slate-400" },
-                { label: "Response Time", value: "30.0s", sub: <span className="text-red-400 flex items-center gap-1">{Ic.trendUp} +2850% vs avg</span>, subColor: "" },
-                { label: "Region", value: "US-East-1", sub: "AWS N. Virginia", subColor: "text-slate-400" },
-                { label: "Uptime (30d)", value: "99.98%", valueColor: "text-emerald-400", sub: "Impact: Minor", subColor: "text-slate-400" },
+                { label: "Average Latency", value: data.stats.avgLatency, sub: <span className="text-red-400 flex items-center gap-1">{Ic.trendUp} +2850% vs avg</span>, subColor: "" },
+                { label: "Total Checks", value: data.stats.totalLogs, subColor: "text-slate-400" },
+                { label: "Uptime (30d)", value: data.stats.uptime, valueColor: "text-emerald-400", sub: "Impact: Minor", subColor: "text-slate-400" },
               ].map((card, i) => (
                 <div key={i} className="glass-card p-5 rounded-xl bg-[#131c29]/40 backdrop-blur-md border border-white/[0.03]">
                   <p className="text-[12px] font-bold text-slate-500 uppercase tracking-wider mb-1">{card.label}</p>
@@ -291,73 +218,12 @@ export default function IncidentDetail() {
             </div>
 
             {/* Chart */}
-            <div className="bg-[#131c29]/40 backdrop-blur-md border border-white/[0.03] rounded-xl overflow-hidden">
-              <div className="p-6 border-b border-[#1e293b] flex justify-between items-center">
-                <h3 className="font-bold text-slate-100 flex items-center gap-2">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#3c83f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                    <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
-                  </svg>
-                  Response Latency (ms)
-                </h3>
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-blue-500/20 border border-blue-500" />
-                  <span className="text-xs text-slate-400 font-medium uppercase tracking-tight">Real-time Stream</span>
-                </div>
-              </div>
-              <div className="h-64 relative px-4 pt-6">
-                {/* grid lines */}
-                <div className="absolute inset-0 p-6 flex flex-col justify-between pointer-events-none opacity-20">
-                  {[0, 1, 2, 3].map((i) => <div key={i} className="w-full h-px bg-slate-500" />)}
-                </div>
-                <svg className="w-full h-full" viewBox="0 0 800 200" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="cg" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stopColor="#3c83f6" stopOpacity="0.3" />
-                      <stop offset="100%" stopColor="#3c83f6" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  <path d="M0 150 L100 145 L200 160 L300 140 L400 155 L500 120 L600 30 L700 25 L800 20 L800 200 L0 200 Z" fill="url(#cg)" />
-                  <path d="M0 150 L100 145 L200 160 L300 140 L400 155 L500 120 L600 30 L700 25 L800 20" fill="none" stroke="#3c83f6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                  <circle cx="600" cy="30" r="4" fill="#3c83f6" />
-                  <text x="610" y="25" fill="#f87171" fontFamily="monospace" fontSize="10" fontWeight="bold">SPIKE: 30,000ms</text>
-                </svg>
-              </div>
-            </div>
+            <PerformanceChart data={data.chartData} monitorId={data.monitor.ID} />
+
 
             {/* Log stream */}
-            <div className="bg-[#131c29]/40 backdrop-blur-md rounded-xl overflow-hidden border border-blue-500/10">
-              <div className="bg-[#0f151f] px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-red-500/40" />
-                    <div className="w-3 h-3 rounded-full bg-slate-500/40" />
-                    <div className="w-3 h-3 rounded-full bg-emerald-500/40" />
-                  </div>
-                  <h3 className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest ml-4">Incident Log Stream</h3>
-                </div>
-                <span className="text-[10px] font-mono text-slate-500">CONNECTED: Sentinel-Node-US-E1</span>
-              </div>
-              <div ref={logRef} className="max-h-[400px] overflow-y-auto font-mono text-sm leading-relaxed">
-                {LOGS.map((log, i) => {
-                  const s = LOG_STYLES[log.level];
-                  return (
-                    <div
-                      key={i}
-                      className={`flex items-start gap-4 px-6 py-3 border-b border-[#1e293b]/30 hover:bg-slate-900/40 transition-colors ${
-                        log.highlight ? "bg-[#7f1d1d]/10" : ""
-                      }`}
-                    >
-                      <span className={`shrink-0 whitespace-nowrap text-xs ${log.highlight ? "font-bold text-slate-300" : "text-slate-500"}`}>{log.time}</span>
-                      {s.icon}
-                      <span className="text-slate-400 text-xs">
-                        <span className={`font-bold ${s.color}`}>{s.label}</span>{" "}
-                        {log.message}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <LogsSection logs={data.log} />
+
 
             {/* Request / Response */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -424,9 +290,9 @@ export default function IncidentDetail() {
               </div>
             </div>
 
-            
 
-            
+
+
           </div>
         </div>
       </main>

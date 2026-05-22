@@ -119,8 +119,6 @@ export default function IncidentsDashboard() {
 
   const router = useRouter();
 
-  // const activeCount = INCIDENTS.filter((i) => i.status !== "resolved").length;
-  // const resolvedCount = INCIDENTS.filter((i) => i.status === "resolved").length;
 
   const { data, isPending } = useQuery({
     queryKey: ['monitors', currentPage],
@@ -137,7 +135,7 @@ export default function IncidentsDashboard() {
 
 
 
-
+console.log(data)
   if (isPending || !data) {
     return (
       <ClipLoader />
@@ -323,7 +321,7 @@ export default function IncidentsDashboard() {
                           <td className="px-6 py-5 text-right">
                             <button
                               onClick={() => {
-                                router.push(`/incident/${inc.ID}`)
+                                router.push(`/incident/${inc.MonitorID}`)
                               }}
                               className="inline-flex items-center text-xs font-bold text-blue-400 hover:text-white transition-colors gap-1">
                               View Details {Icons.chevronRight}
