@@ -28,17 +28,14 @@ func (r *Repository) GetMonitorResults(monitorId string) ([]models.MonitorResult
 		Where("id = ?", monitorId).
 		Find(&monitor)
 
-	
-
 	if err != nil {
-		return nil, monitor,monitorLogs, 0, 0, 0, err
+		return nil, monitor, monitorLogs, 0, 0, 0, err
 	}
 
 	database.DB.
 		Where("monitor_id = ?", monitorId).
 		Order("created_at desc").
 		First(&monitorLogs)
-		
 
 	var totalLogs int64
 	database.DB.
@@ -71,7 +68,70 @@ func (r *Repository) GetMonitorResults(monitorId string) ([]models.MonitorResult
 		avgLatency = float64(totalResponseTime) / float64(upTimeLogs)
 	}
 
-	return results, monitor,monitorLogs, uptime, avgLatency, totalLogs, nil
+	return results, monitor, monitorLogs, uptime, avgLatency, totalLogs, nil
+}
+
+func (r *Repository) GetMonitorIncidentResult(monitorId string) (models.MonitorResult , models.Monitor, models.MonitorLog, float64, float64, int64, error) {
+
+	var monitor models.Monitor
+	var monitorLogs models.MonitorLog
+	var firstDownResult models.MonitorResult
+
+	err := database.DB.
+		Where("id = ?", monitorId).
+		Find(&monitor).
+		Error
+	if err != nil {
+		return firstDownResult, monitor, monitorLogs, 0, 0, 0, err
+	}
+	err = database.DB.
+		Where("monitor_id = ? and status = ?", monitorId, "DOWN").
+		Select("checked_at").
+		Order("checked_at desc").
+		First(&firstDownResult).
+		Error
+
+	if err != nil {
+		return firstDownResult, monitor, monitorLogs, 0, 0, 0, err
+	}
+
+	database.DB.
+		Where("monitor_id = ?", monitorId).
+		Order("created_at desc").
+		First(&monitorLogs)
+
+	var totalLogs int64
+	database.DB.
+		Model(&models.MonitorResult{}).
+		Where("monitor_id = ?", monitorId).
+		Count(&totalLogs)
+
+	var upTimeLogs int64
+	database.DB.
+		Model(&models.MonitorResult{}).
+		Where("monitor_id = ?", monitorId).
+		Where("status = ?", "UP").
+		Count(&upTimeLogs)
+
+	var totalResponseTime int64
+	database.DB.
+		Model(&models.MonitorResult{}).
+		Where("monitor_id = ?", monitorId).
+		Where("status = ?", "UP").
+		Select("SUM(response_time_ms)").
+		Scan(&totalResponseTime)
+
+	var uptime float64
+	if totalLogs > 0 {
+		uptime = (float64(upTimeLogs) / float64(totalLogs)) * 100
+	}
+
+	var avgLatency float64
+	if upTimeLogs > 0 {
+		avgLatency = float64(totalResponseTime) / float64(upTimeLogs)
+	}
+
+	return firstDownResult, monitor, monitorLogs, uptime, avgLatency, totalLogs, nil
 }
 
 type Result struct {
@@ -142,5 +202,3 @@ func (r *Repository) GetAllResults() ([]models.MonitorResult, error) {
 
 	return results, err
 }
-
-

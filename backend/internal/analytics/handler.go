@@ -43,6 +43,33 @@ func (h *Handler) GetResults(c *gin.Context) {
 
 }
 
+func (h *Handler) GetMonitorIncidentResult(c *gin.Context) {
+
+	id := c.Param("id")
+
+	firstDownResult, monitor, logs, uptime, avgLatency, totalLogs, err := h.service.GetMonitorIncidentResult(id)
+	chartData := h.service.GetChart(id)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch results"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"chartData": chartData,
+		"firstDownResult":   firstDownResult,
+		"monitor":   monitor,
+		"stats": gin.H{
+			"totalLogs":  totalLogs,
+			"uptime":     uptime,
+			"avgLatency": avgLatency,
+		},
+		"log" : logs,
+		
+	})
+
+}
+
 func (h *Handler) GetUptime(c *gin.Context) {
 
 	id := c.Param("id")

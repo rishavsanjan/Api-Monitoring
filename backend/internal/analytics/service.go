@@ -18,6 +18,11 @@ func (s *Service) GetResults(monitorID string) ([]models.MonitorResult, models.M
 	return s.repo.GetMonitorResults(monitorID)
 }
 
+func (s *Service) GetMonitorIncidentResult(monitorID string) (models.MonitorResult, models.Monitor,models.MonitorLog, float64, float64, int64, error) {
+	return s.repo.GetMonitorIncidentResult(monitorID)
+}
+
+
 
 func (s *Service) GetChart(monitorId string) []ChartPoint {
 	return  s.repo.GetChart(monitorId)
