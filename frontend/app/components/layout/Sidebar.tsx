@@ -102,13 +102,13 @@ export default function Sidebar() {
                             key={item.label}
                             title={collapsed ? item.label : undefined}
                             className={`
-              flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
-              ${collapsed ? "justify-center" : ""}
-              ${activeBar === item.label
+                               flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
+                               ${collapsed ? "justify-center" : ""}
+                               ${activeBar === item.label
                                     ? "bg-blue-500/10 text-blue-400"
                                     : "text-slate-400 hover:bg-slate-800 hover:text-white"
                                 }
-            `}
+                             `}
                         >
                             <span className="flex-shrink-0">{item.icon}</span>
                             {

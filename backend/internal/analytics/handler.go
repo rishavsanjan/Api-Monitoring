@@ -2,6 +2,7 @@ package analytics
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -37,8 +38,7 @@ func (h *Handler) GetResults(c *gin.Context) {
 			"uptime":     uptime,
 			"avgLatency": avgLatency,
 		},
-		"log" : logs,
-		
+		"log": logs,
 	})
 
 }
@@ -55,17 +55,24 @@ func (h *Handler) GetMonitorIncidentResult(c *gin.Context) {
 		return
 	}
 
+	var firstDownTime time.Time
+
+	if firstDownResult.CheckedAt.Before(monitor.CreatedAt) {
+		firstDownTime = monitor.CreatedAt
+	}else{
+		firstDownTime = firstDownResult.CheckedAt
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"chartData": chartData,
-		"firstDownResult":   firstDownResult,
-		"monitor":   monitor,
+		"chartData":       chartData,
+		"firstDownTime": firstDownTime,
+		"monitor":         monitor,
 		"stats": gin.H{
 			"totalLogs":  totalLogs,
 			"uptime":     uptime,
 			"avgLatency": avgLatency,
 		},
-		"log" : logs,
-		
+		"log": logs,
 	})
 
 }
@@ -85,5 +92,3 @@ func (h *Handler) GetUptime(c *gin.Context) {
 		"uptime": uptime,
 	})
 }
-
-

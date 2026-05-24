@@ -6,10 +6,13 @@ import React, { useEffect, useState } from 'react'
 interface Props {
     monitor: Monitor,
     logCreationTime: Date
+    firstIncidentTime: Date
 }
 
-const IncidentHeader: React.FC<Props> = ({ monitor, logCreationTime }) => {
-    const [elapsedSeconds, setElapsedSeconds] = useState(14 * 60 + 32);
+const IncidentHeader: React.FC<Props> = ({ monitor, logCreationTime, firstIncidentTime }) => {
+    const [elapsedSeconds, setElapsedSeconds] = useState(() => {
+        return Math.floor((Date.now() - new Date(firstIncidentTime).getTime()) / 1000);
+    });
     const [resolved, setResolved] = useState(false);
 
     useEffect(() => {
@@ -55,7 +58,7 @@ const IncidentHeader: React.FC<Props> = ({ monitor, logCreationTime }) => {
                     </span>
                     <div className="h-4 w-px bg-[#334155] mx-1" />
                     <span className="text-slate-400 text-sm flex items-center gap-1.5">
-                        <ClipboardClock /> Started {timeAgo(logCreationTime)}
+                        <ClipboardClock /> Started {timeAgo(firstIncidentTime)}
                     </span>
                     <span className="text-slate-400 text-sm flex items-center gap-1.5">
                         <Timer /> Duration: {formatDuration(elapsedSeconds)}
@@ -70,7 +73,7 @@ const IncidentHeader: React.FC<Props> = ({ monitor, logCreationTime }) => {
                 >
                     <RefreshCcw />Retry Check
                 </button>
-                
+
             </div>
         </header>
     )

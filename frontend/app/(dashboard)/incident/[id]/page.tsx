@@ -4,7 +4,7 @@ import LogsSection from "@/app/components/layout/MonitorLog";
 import PerformanceChart from "@/app/components/layout/PerformanceChart";
 import api from "@/lib/axios";
 import { timeAgo } from "@/lib/helper";
-import { MonitorPageResponse } from "@/type/props";
+import { IncidentPageResponse, MonitorPageResponse } from "@/type/props";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useState, useEffect, useRef, JSX } from "react";
@@ -137,8 +137,8 @@ export default function IncidentDetail() {
   const { data, isLoading } = useQuery({
     queryKey: ['monitor-result', id],
     queryFn: async () => {
-      const response = await api.get(`/api/monitors/${id}/results`)
-      return response.data as MonitorPageResponse
+      const response = await api.get(`/api/monitors/${id}/incident`)
+      return response.data as IncidentPageResponse
     }
   })
 
@@ -147,36 +147,7 @@ export default function IncidentDetail() {
 
 
 
-  const ACTIVITY: ActivityItem[] = [
-    {
-      icon: Ic.robot,
-      iconBg: "bg-blue-500",
-      title: "Incident Detected",
-      description: "System identified 3 consecutive failures.",
-      timeAgo: "14m ago",
-    },
-    {
-      icon: Ic.chat,
-      iconBg: "bg-[#1e293b] border border-[#334155]",
-      title: "Slack Alert Sent",
-      description: <span>Dispatched to <span className="text-blue-400">#sre-team</span></span>,
-      timeAgo: "12m ago",
-    },
-    {
-      icon: Ic.mail,
-      iconBg: "bg-[#1e293b] border border-[#334155]",
-      title: "Email Escalation",
-      description: "Alert sent to system administrators.",
-      timeAgo: "10m ago",
-    },
-    {
-      icon: Ic.escalate,
-      iconBg: "bg-[#7f1d1d]",
-      title: "Escalated to L2",
-      description: "Automatic escalation due to critical impact.",
-      timeAgo: "5m ago",
-    },
-  ];
+  
 
   if (!data) {
     return (
@@ -188,17 +159,17 @@ export default function IncidentDetail() {
   }
 
   return (
-    <div className="bg-[#101722] text-slate-100 min-h-screen font-sans flex">
+    <div className="bg-[#101722] text-slate-100 min-h-screen font-sans flex ">
 
 
       {/* ── Main ── */}
       <main className="p-8 min-h-screen flex-1">
         {/* Header */}
-        <IncidentHeader monitor={data.monitor} logCreationTime={data.log.CreatedAt}/>
+        <IncidentHeader monitor={data.monitor} logCreationTime={data.log.CreatedAt} firstIncidentTime={data.firstDownTime}/>
         
 
         {/* Grid layout */}
-        <div className="grid grid-cols-12 gap-6">
+        <div className="grid grid-cols-6 gap-6">
           {/* ── Left column ── */}
           <div className="col-span-12 lg:col-span-8 space-y-6">
             {/* Stat cards */}
@@ -234,7 +205,7 @@ export default function IncidentDetail() {
                 <div className="space-y-4">
                   <div>
                     <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">URL</p>
-                    <p className="text-sm font-mono text-slate-100 break-all">https://api.midnight.pulse/v1/auth/token</p>
+                    <p className="text-sm font-mono text-slate-100 break-all">{data.monitor.URL}</p>
                   </div>
                   <div className="flex justify-between">
                     <div>
@@ -265,35 +236,6 @@ export default function IncidentDetail() {
             </div>
           </div>
 
-          {/* ── Right column ── */}
-          <div className="col-span-12 lg:col-span-4 space-y-6">
-            {/* Activity feed */}
-            <div className="bg-[#131c29]/40 backdrop-blur-md border border-white/[0.03] rounded-xl overflow-hidden">
-              <div className="p-6 border-b border-[#1e293b]">
-                <h3 className="font-bold text-slate-100">System Activity</h3>
-              </div>
-              <div className="p-6">
-                <div className="relative space-y-8">
-                  {/* timeline line */}
-                  <div className="absolute left-[11px] top-2 bottom-2 w-[2px] bg-[#1e293b]" />
-                  {ACTIVITY.map((item, i) => (
-                    <div key={i} className="relative pl-10">
-                      <div className={`absolute left-0 top-1 w-6 h-6 rounded-full ${item.iconBg} flex items-center justify-center ring-4 ring-[#101722] text-slate-300`}>
-                        {item.icon}
-                      </div>
-                      <p className="text-sm font-semibold text-slate-100">{item.title}</p>
-                      <p className="text-xs text-slate-400">{item.description}</p>
-                      <span className="text-[10px] text-slate-500 font-medium">{item.timeAgo}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-
-
-
-          </div>
         </div>
       </main>
 

@@ -79,6 +79,21 @@ export interface MonitorPageResponse {
     log: Log
 }
 
+export interface IncidentPageResponse {
+    firstDownTime:Date,
+    monitor: Monitor,
+    chartData: {
+        time: string,
+        value: number
+    }[],
+    stats: {
+        totalLogs: number
+        uptime: number
+        avgLatency: number
+    },
+    log: Log
+}
+
 export interface Log {
     CreatedAt: Date,
     ID: number,

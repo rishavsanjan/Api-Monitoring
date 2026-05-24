@@ -71,7 +71,7 @@ func (r *Repository) GetMonitorResults(monitorId string) ([]models.MonitorResult
 	return results, monitor, monitorLogs, uptime, avgLatency, totalLogs, nil
 }
 
-func (r *Repository) GetMonitorIncidentResult(monitorId string) (models.MonitorResult , models.Monitor, models.MonitorLog, float64, float64, int64, error) {
+func (r *Repository) GetMonitorIncidentResult(monitorId string) (models.MonitorResult, models.Monitor, models.MonitorLog, float64, float64, int64, error) {
 
 	var monitor models.Monitor
 	var monitorLogs models.MonitorLog
@@ -84,16 +84,12 @@ func (r *Repository) GetMonitorIncidentResult(monitorId string) (models.MonitorR
 	if err != nil {
 		return firstDownResult, monitor, monitorLogs, 0, 0, 0, err
 	}
-	err = database.DB.
-		Where("monitor_id = ? and status = ?", monitorId, "DOWN").
+	database.DB.
+		Where("monitor_id = ? AND status = ?", monitorId, "UP").
 		Select("checked_at").
-		Order("checked_at desc").
-		First(&firstDownResult).
-		Error
-
-	if err != nil {
-		return firstDownResult, monitor, monitorLogs, 0, 0, 0, err
-	}
+		Order("checked_at DESC").
+		Limit(1).
+		Find(&firstDownResult)
 
 	database.DB.
 		Where("monitor_id = ?", monitorId).
@@ -130,6 +126,8 @@ func (r *Repository) GetMonitorIncidentResult(monitorId string) (models.MonitorR
 	if upTimeLogs > 0 {
 		avgLatency = float64(totalResponseTime) / float64(upTimeLogs)
 	}
+
+	
 
 	return firstDownResult, monitor, monitorLogs, uptime, avgLatency, totalLogs, nil
 }
