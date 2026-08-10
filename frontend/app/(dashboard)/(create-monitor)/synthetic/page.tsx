@@ -9,7 +9,6 @@ import { CheckIcon, ChevronRightIcon, PlusIcon } from "lucide-react";
 import { useState, useCallback } from "react";
 import toast from "react-hot-toast";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface MonitorForm {
     name: string;
@@ -17,10 +16,12 @@ interface MonitorForm {
     method: "GET" | "POST" | "PUT";
     keyword: string;
     token: string;
+    authVariable: string;
     body: string;
     showAdv: boolean;
     showToken: boolean;
-    extract: Extract
+    extract: Extract;
+
 }
 
 interface Extract {
@@ -37,7 +38,6 @@ function createExtract(): Extract {
 
 type FormErrors = Partial<Record<string, string>>;
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function createMonitor(): MonitorForm {
     return {
@@ -46,6 +46,7 @@ function createMonitor(): MonitorForm {
         method: "GET",
         keyword: "",
         token: "",
+        authVariable: "",
         body: "",
         showAdv: false,
         showToken: false,
@@ -60,7 +61,6 @@ function formatInterval(mins: number): string {
 }
 
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function CreateMonitorPage() {
     const [monitors, setMonitors] = useState<MonitorForm[]>([createMonitor()]);
@@ -68,7 +68,6 @@ export default function CreateMonitorPage() {
     const [errors, setErrors] = useState<FormErrors>({});
     const [monitorName, setMonitorName] = useState("");
 
-    // ── Handlers ────────────────────────────────────────────────────────────────
 
     const updateMonitor = useCallback(
         (i: number, key: keyof MonitorForm | "variableName" | "path", value: string | boolean) => {
@@ -90,7 +89,6 @@ export default function CreateMonitorPage() {
 
                 } : m))
             );
-            // Clear related error on change
             const errKeys = [`name_${i}`, `url_${i}`, `kw_${i}`];
             setErrors((prev) => {
                 const next = { ...prev };
@@ -106,7 +104,6 @@ export default function CreateMonitorPage() {
     const removeMonitor = (i: number) =>
         setMonitors((prev) => prev.filter((_, idx) => idx !== i));
 
-    // ── Validation ───────────────────────────────────────────────────────────────
 
     const validate = (): FormErrors => {
         const errs: FormErrors = {};
@@ -117,12 +114,10 @@ export default function CreateMonitorPage() {
             } else if (!/^https?:\/\/.+/.test(m.url)) {
                 errs[`url_${i}`] = "Enter a valid URL starting with http:// or https://";
             }
-            //if (!m.keyword.trim()) errs[`kw_${i}`] = "At least one keyword is required";
         });
         return errs;
     };
 
-    // ── Submit ───────────────────────────────────────────────────────────────────
 
     const handleSubmissionMutation = useMutation({
         mutationKey: ['create-monitor'],
@@ -130,27 +125,38 @@ export default function CreateMonitorPage() {
             console.log(monitors)
             const config = monitors.map((m) => {
                 const mustContainKeywords = m.keyword.split(",").map(item => item.trim()).filter(item => item.length > 0);
-                const path = `.$${m.extract.path}`
+                const path = m.extract.path
+                    ? `$.${m.extract.path}`
+                    : "";
+
                 return {
                     name: m.name,
+
                     request: {
                         url: m.url.trim(),
                         method: m.method,
                         body: m.body,
-                        headers: {
-                            "Authorization": `Bearer ${m.token}`
-                        }
+
+                        headers: m.authVariable
+                            ? {
+                                Authorization: `Bearer {{${m.authVariable}}}`
+                            }
+                            : {}
                     },
+
                     assertions: {
                         status: 200,
                         mustContain: mustContainKeywords
                     },
-                    extract: m.extract.path.length > 0 ? {
-                        [m.extract.variableName]: path
-                    } : {}
-                }
+
+                    extract: m.extract.path
+                        ? {
+                            [m.extract.variableName]: path
+                        }
+                        : {}
+                };
             })
-            
+            console.log(config)
             await api.post(`/api/monitors`, {
                 name: monitorName,
                 URL: monitors[0].url,
@@ -188,7 +194,6 @@ export default function CreateMonitorPage() {
         setErrors({});
     };
 
-    // ── Success state ─────────────────────────────────────────────────────────────
 
     if (handleSubmissionMutation.isSuccess) {
         return (
@@ -225,7 +230,6 @@ export default function CreateMonitorPage() {
     }
 
 
-    // ── Main render ──────────────────────────────────────────────────────────────
 
     return (
         <div className="mx-auto  w-full py-8 px-4 space-y-5">
@@ -261,6 +265,7 @@ export default function CreateMonitorPage() {
                     key={i}
                     monitor={monitor}
                     index={i}
+                    previousMonitors={monitors.slice(0, i)}
                     errors={errors}
                     canRemove={monitors.length > 1}
                     onChange={updateMonitor}

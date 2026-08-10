@@ -25,10 +25,10 @@ import (
 )
 
 func RunMonitoringCycle() {
-	//alertRepo := alert.NewRepository()
-	//alertService := alert.NewService(alertRepo)
+	alertRepo := alert.NewRepository()
+	alertService := alert.NewService(alertRepo)
 
-	//secretService := monitor.NewSecretRepository()
+	secretService := monitor.NewSecretRepository()
 	encryptionService := security.NewEncryptionService(os.Getenv("ENCRYPTION_KEY"))
 
 	var monitors []models.Monitor
@@ -49,124 +49,117 @@ func RunMonitoringCycle() {
 			Where("id = ?", monitor.ID).
 			Update("next_run", nextRun)
 		switch monitor.Type {
-		// case "http":
-		// 	go checkHttpMonitor(monitor, alertService)
-		// case "keyword":
-		// 	go func(m models.Monitor) {
-		// 		status, responseTime, statusCode, logMessage, err := RunKeywordCheck(m, alertService, secretService, encryptionService)
-		// 		errorMessage := ""
-		// 		if err != nil {
-		// 			status = "DOWN"
-		// 			errorMessage = err.Error()
-		// 			AddLogHelper(fmt.Sprintf("Error : %s", err), "error", &logMessage)
-		// 		}
+		case "http":
+			go checkHttpMonitor(monitor, alertService)
+		case "keyword":
+			go func(m models.Monitor) {
+				status, responseTime, statusCode, logMessage, err := RunKeywordCheck(m, alertService, secretService, encryptionService)
+				errorMessage := ""
+				if err != nil {
+					status = "DOWN"
+					errorMessage = err.Error()
+					AddLogHelper(fmt.Sprintf("Error : %s", err), "error", &logMessage)
+				}
 
-		// 		result := models.MonitorResult{
-		// 			MonitorID:      m.ID,
-		// 			Status:         status,
-		// 			StatusCode:     statusCode,
-		// 			ResponseTimeMs: int(responseTime),
-		// 			CheckedAt:      time.Now(),
-		// 			ErrorMessage:   errorMessage,
-		// 		}
+				result := models.MonitorResult{
+					MonitorID:      m.ID,
+					Status:         status,
+					StatusCode:     statusCode,
+					ResponseTimeMs: int(responseTime),
+					CheckedAt:      time.Now(),
+					ErrorMessage:   errorMessage,
+				}
 
-		// 		database.DB.Create(&result)
+				database.DB.Create(&result)
 
-		// 		log := models.MonitorLog{
-		// 			MonitorID: m.ID,
-		// 			ResultID:  result.ID,
-		// 			Messages:  logMessage,
-		// 			CreatedAt: time.Now(),
-		// 		}
+				log := models.MonitorLog{
+					MonitorID: m.ID,
+					ResultID:  result.ID,
+					Messages:  logMessage,
+					CreatedAt: time.Now(),
+				}
 
-		// 		database.DB.Create(&log)
-		// 		combined, err := json.Marshal(struct {
-		// 			Result models.MonitorResult `json:"history"`
-		// 			Log    models.MonitorLog    `json:"log"`
-		// 		}{
-		// 			Result: result,
-		// 			Log:    log,
-		// 		})
-		// 		if err != nil {
-		// 			return
-		// 		}
+				database.DB.Create(&log)
+				combined, err := json.Marshal(struct {
+					Result models.MonitorResult `json:"history"`
+					Log    models.MonitorLog    `json:"log"`
+				}{
+					Result: result,
+					Log:    log,
+				})
+				if err != nil {
+					return
+				}
 
-		// 		ws.SendToUser(m.UserId, combined)
+				ws.SendToUser(m.UserId, combined)
 
-		// 	}(monitor)
-		// case "ping":
-		// 	go func(m models.Monitor) {
-		// 		log.Println("checking ping : ")
-		// 		errorMessage := ""
-		// 		status, latency, packetLoss, logMessage, err := RunPingCheck(m, alertService)
-		// 		log.Println("stats : ")
-		// 		log.Println(status, latency, packetLoss, err)
-		// 		if err != nil {
-		// 			status = "DOWN"
-		// 			errorMessage = err.Error()
-		// 		}
-		// 		statusCode := 500
-		// 		if status == "UP" {
-		// 			statusCode = 200
-		// 		}
-		// 		result := models.MonitorResult{
-		// 			MonitorID:      m.ID,
-		// 			Status:         status,
-		// 			StatusCode:     statusCode,
-		// 			ResponseTimeMs: int(latency),
-		// 			CheckedAt:      time.Now(),
-		// 			PacketLoss:     packetLoss,
-		// 			ErrorMessage:   errorMessage,
-		// 		}
+			}(monitor)
+		case "ping":
+			go func(m models.Monitor) {
+				log.Println("checking ping : ")
+				errorMessage := ""
+				status, latency, packetLoss, logMessage, err := RunPingCheck(m, alertService)
+				log.Println("stats : ")
+				log.Println(status, latency, packetLoss, err)
+				if err != nil {
+					status = "DOWN"
+					errorMessage = err.Error()
+				}
+				statusCode := 500
+				if status == "UP" {
+					statusCode = 200
+				}
+				result := models.MonitorResult{
+					MonitorID:      m.ID,
+					Status:         status,
+					StatusCode:     statusCode,
+					ResponseTimeMs: int(latency),
+					CheckedAt:      time.Now(),
+					PacketLoss:     packetLoss,
+					ErrorMessage:   errorMessage,
+				}
 
-		// 		log := models.MonitorLog{
-		// 			MonitorID: m.ID,
-		// 			ResultID:  result.ID,
-		// 			Messages:  logMessage,
-		// 			CreatedAt: time.Now(),
-		// 		}
+				log := models.MonitorLog{
+					MonitorID: m.ID,
+					ResultID:  result.ID,
+					Messages:  logMessage,
+					CreatedAt: time.Now(),
+				}
 
-		// 		database.DB.Create(&result)
-		// 		database.DB.Create(&log)
-		// 		combined, err := json.Marshal(struct {
-		// 			Result models.MonitorResult `json:"history"`
-		// 			Log    models.MonitorLog    `json:"log"`
-		// 		}{
-		// 			Result: result,
-		// 			Log:    log,
-		// 		})
-		// 		if err != nil {
-		// 			return
-		// 		}
+				database.DB.Create(&result)
+				database.DB.Create(&log)
+				combined, err := json.Marshal(struct {
+					Result models.MonitorResult `json:"history"`
+					Log    models.MonitorLog    `json:"log"`
+				}{
+					Result: result,
+					Log:    log,
+				})
+				if err != nil {
+					return
+				}
 
-		// 		ws.SendToUser(m.UserId, combined)
+				ws.SendToUser(m.UserId, combined)
 
-		// 	}(monitor)
+			}(monitor)
 		case "synthetic":
 			go func(m models.Monitor) {
 
 				var logs []models.LogMessage
 				errorMessage := ""
-				log.Println("===================================")
-				log.Println("RUNNING SYNTHETIC MONITOR")
 				AddLogHelper("RUNNING SYNTHETIC MONITOR", "info", &logs)
-				log.Println("Monitor ID:", m.ID)
 				AddLogHelper(fmt.Sprintf("Monitor ID: %s", m.ID), "info", &logs)
-				log.Println("Monitor URL:", m.URL)
 				AddLogHelper(fmt.Sprintf("Monitor URL: %s", m.URL), "info", &logs)
-				log.Println("===================================")
 
 				var config MonitorConfig
 
 				err := json.Unmarshal(m.Config, &config)
 				if err != nil {
-					log.Println("❌ Failed to parse config:", err)
 					AddLogHelper(fmt.Sprintf("❌ Failed to parse config: %s", err), "error", &logs)
 					errorMessage = fmt.Sprintf("❌ Failed to parse config: %s", err)
 					return
 				}
 
-				log.Println("✅ Config parsed successfully")
 				AddLogHelper("✅ Config parsed successfully", "success", &logs)
 
 				// Load secrets
@@ -177,13 +170,11 @@ func RunMonitoringCycle() {
 					Find(&secrets).Error
 
 				if err != nil {
-					log.Println("❌ Failed to load secrets:", err)
 					AddLogHelper(fmt.Sprintf("❌ Failed to load secrets: %s", err), "error", &logs)
 					errorMessage = fmt.Sprintf("❌ Failed to load secrets: %s", err)
 					return
 				}
 
-				log.Println("✅ Secrets loaded:", len(secrets))
 				AddLogHelper(fmt.Sprintf("✅ Secrets loaded: %d", len(secrets)), "success", &logs)
 
 				// Build decrypted secret map
@@ -195,7 +186,6 @@ func RunMonitoringCycle() {
 
 				for _, secret := range secrets {
 
-					log.Println("Decrypting secret:", secret.Key)
 					AddLogHelper(fmt.Sprintf("Decrypting secret: %s", secret.Key), "info", &logs)
 
 					decrypted, err := encryptionService.Decrypt(
@@ -203,7 +193,6 @@ func RunMonitoringCycle() {
 					)
 
 					if err != nil {
-						log.Println("❌ Failed to decrypt secret:", err)
 						AddLogHelper(fmt.Sprintf("❌ Failed to decrypt secret: %s", err), "error", &logs)
 						errorMessage = fmt.Sprintf("❌ Failed to decrypt secret: %s", err)
 						return
@@ -212,32 +201,26 @@ func RunMonitoringCycle() {
 					secretMap[secret.Key] = decrypted
 				}
 
-				log.Println("✅ All secrets decrypted")
 				AddLogHelper("✅ All secrets decrypted", "success", &logs)
 
 				// Replace variables
 				ReplaceVariablesInConfig(&config, secretMap)
 
-				log.Println("✅ Variables replaced in config")
 				AddLogHelper("✅ Variables replaced in config", "success", &logs)
 
 				status := "DOWN"
 				var responseTime int64
 
-				log.Println("🚀 Running synthetic monitor steps...")
 				AddLogHelper("🚀 Running synthetic monitor steps...", "info", &logs)
 
 				status, responseTime, err = RunSyntheticMonitor(config, &logs)
 
 				if err != nil {
-					log.Println("❌ Synthetic monitor failed:", err)
 					AddLogHelper(fmt.Sprintf("❌ Synthetic monitor failed: %s", err), "error", &logs)
 					errorMessage = fmt.Sprintf("❌ Synthetic monitor failed: %s", err)
 				}
 
-				log.Println("✅ FINAL STATUS:", status)
 				AddLogHelper(fmt.Sprintf("✅ FINAL STATUS: %s", status), "success", &logs)
-				log.Println("⏱ RESPONSE TIME:", responseTime, "ms")
 				AddLogHelper(fmt.Sprintf("⏱ RESPONSE TIME: %d ms", responseTime), "info", &logs)
 
 				result := models.MonitorResult{
@@ -337,14 +320,9 @@ func checkHttpMonitor(monitor models.Monitor, alertService *alert.Service) {
 
 	errorMessage = ""
 
-	log.Println("===================================")
-	log.Println("RUNNING HTTP MONITOR")
 	AddLogHelper("RUNNING HTTP MONITOR", "info", &logs)
-	log.Println("Monitor ID:", monitor.ID)
 	AddLogHelper(fmt.Sprintf("Monitor ID: %s", monitor.ID), "info", &logs)
-	log.Println("Monitor URL:", monitor.URL)
 	AddLogHelper(fmt.Sprintf("Monitor URL: %s", monitor.URL), "info", &logs)
-	log.Println("===================================")
 
 	start := time.Now()
 
@@ -352,7 +330,6 @@ func checkHttpMonitor(monitor models.Monitor, alertService *alert.Service) {
 		Timeout: 10 * time.Second,
 	}
 
-	log.Println("🚀 Sending request...")
 	AddLogHelper("🚀 Sending request...", "info", &logs)
 
 	response, err := client.Get(monitor.URL)
@@ -363,20 +340,16 @@ func checkHttpMonitor(monitor models.Monitor, alertService *alert.Service) {
 	statusCode := 0
 
 	if err != nil {
-		log.Println("❌ REQUEST ERROR:", err)
 		AddLogHelper(fmt.Sprintf("❌ REQUEST ERROR: %s", err), "error", &logs)
 		errorMessage = (fmt.Sprintf("❌ REQUEST ERROR: %s", err))
 	} else {
 		statusCode = response.StatusCode
-		log.Println("✅ Response received:", statusCode)
 		AddLogHelper(fmt.Sprintf("✅ Response received: %d", statusCode), "success", &logs)
 
 		if response.StatusCode == monitor.ExpectedStatus {
 			status = "UP"
-			log.Println("✅ Status matched expected:", monitor.ExpectedStatus)
 			AddLogHelper(fmt.Sprintf("✅ Status matched expected: %d", monitor.ExpectedStatus), "success", &logs)
 		} else {
-			log.Println("❌ STATUS MISMATCH: expected:", monitor.ExpectedStatus, "got:", statusCode)
 			AddLogHelper(fmt.Sprintf("❌ STATUS MISMATCH: expected: %d got: %d", monitor.ExpectedStatus, statusCode), "error", &logs)
 			errorMessage = (fmt.Sprintf("❌ STATUS MISMATCH: expected: %d got: %d", monitor.ExpectedStatus, statusCode))
 		}
@@ -384,9 +357,7 @@ func checkHttpMonitor(monitor models.Monitor, alertService *alert.Service) {
 		response.Body.Close()
 	}
 
-	log.Println("✅ FINAL STATUS:", status)
 	AddLogHelper(fmt.Sprintf("✅ FINAL STATUS: %s", status), "info", &logs)
-	log.Println("⏱ RESPONSE TIME:", responseTime, "ms")
 	AddLogHelper(fmt.Sprintf("⏱ RESPONSE TIME: %d ms", responseTime), "info", &logs)
 
 	alertService.HandleStatusChange(monitor.ID, status)
@@ -401,7 +372,6 @@ func checkHttpMonitor(monitor models.Monitor, alertService *alert.Service) {
 	}
 
 	database.DB.Create(&result)
-	log.Println("✅ Result saved to database")
 	AddLogHelper("✅ Result saved to database", "info", &logs)
 
 	log := models.MonitorLog{
@@ -459,7 +429,6 @@ func AddLogHelper(message string, msgtype string, logs *[]models.LogMessage) {
 
 	*logs = append(*logs, entry)
 
-	log.Println(message)
 }
 
 func RunKeywordCheck(
@@ -472,20 +441,14 @@ func RunKeywordCheck(
 	var logs []models.LogMessage
 	start := time.Now()
 
-	log.Println("===================================")
-	log.Println("RUNNING KEYWORD MONITOR")
 	AddLogHelper("RUNNING KEYWORD MONITOR", "info", &logs)
-	log.Println("Monitor ID:", monitor.ID)
 	AddLogHelper(fmt.Sprintf("Monitor ID: %s", monitor.ID), "info", &logs)
-	log.Println("Monitor URL:", monitor.URL)
 	AddLogHelper(fmt.Sprintf("Monitor URL: %s", monitor.URL), "info", &logs)
-	log.Println("===================================")
 
 	// 🔹 Parse config
 	var cfg KeywordConfig
 
 	if err := json.Unmarshal(monitor.Config, &cfg); err != nil {
-		log.Println("❌ CONFIG PARSE ERROR:", err)
 		AddLogHelper(fmt.Sprintf("❌ CONFIG PARSE ERROR: %s", err), "error", &logs)
 		return "DOWN", 0, 0, logs, err
 	}
@@ -493,29 +456,24 @@ func RunKeywordCheck(
 	log.Printf("%+v\n", cfg)
 	AddLogHelper("Parsing config", "info", &logs)
 	AddLogHelper(fmt.Sprintf("%+v", cfg), "success", &logs)
-	log.Println("✅ Config parsed successfully")
 	AddLogHelper("✅ Config parsed successfully", "success", &logs)
 
 	// 🔐 Load monitor secrets
 	secrets, err := secretRepo.GetMonitorSecrets(monitor.ID)
 	if err != nil {
-		log.Println("❌ SECRET LOAD ERROR:", err)
 		AddLogHelper(fmt.Sprintf("❌ SECRET LOAD ERROR: %s", err), "error", &logs)
 		return "DOWN", 0, 0, logs, err
 	}
 	AddLogHelper("Loading secrets", "info", &logs)
-	log.Println("✅ Secrets loaded:", len(secrets))
 	AddLogHelper(fmt.Sprintf("✅ Secrets loaded: %d", len(secrets)), "success", &logs)
 
 	// 🔐 Build variables map
 	variables := make(map[string]string)
 
 	for _, secret := range secrets {
-		log.Println("Decrypting secret:", secret.Key)
 		AddLogHelper(fmt.Sprintf("Decrypting secret: %s", secret.Key), "info", &logs)
 		decrypted, err := encryptionService.Decrypt(secret.EncryptedValue)
 		if err != nil {
-			log.Println("❌ SECRET DECRYPT ERROR:", err)
 			AddLogHelper(fmt.Sprintf("❌ SECRET DECRYPT ERROR: %s", err), "error", &logs)
 			return "DOWN", 0, 0, logs, err
 		}
@@ -524,7 +482,6 @@ func RunKeywordCheck(
 	}
 
 	AddLogHelper("Preparing variables", "info", &logs)
-	log.Println("✅ Variables prepared")
 	AddLogHelper("✅ Variables prepared", "success", &logs)
 
 	// 🔄 Replace variables in body
@@ -533,14 +490,11 @@ func RunKeywordCheck(
 	// 🔧 Unwrap double-encoded JSON body if needed
 	var unwrapped string
 	if err := json.Unmarshal([]byte(cfg.Request.Body), &unwrapped); err == nil {
-		log.Println("⚠️ Body was double-encoded, unwrapping...")
 		AddLogHelper("⚠️ Body was double-encoded, unwrapping...", "warning", &logs)
 		cfg.Request.Body = strings.TrimSpace(unwrapped)
 	}
 
-	log.Println("✅ Body variables replaced")
 	AddLogHelper("✅ Body variables replaced", "info", &logs)
-	log.Println(cfg.Request.Body)
 	AddLogHelper(cfg.Request.Body, "success", &logs)
 
 	// 🔄 Replace variables in headers, skip empty Bearer tokens
@@ -553,7 +507,6 @@ func RunKeywordCheck(
 			trimmed := strings.TrimSpace(resolved)
 			parts := strings.SplitN(trimmed, " ", 2)
 			if len(parts) < 2 || strings.TrimSpace(parts[1]) == "" {
-				log.Println("⚠️ Skipping Authorization header — token is empty")
 				AddLogHelper("⚠️ Skipping Authorization header — token is empty", "warning", &logs)
 				continue
 			}
@@ -568,13 +521,10 @@ func RunKeywordCheck(
 	// 🔹 Prepare request body reader
 	var bodyReader io.Reader = nil
 
-	log.Println("FINAL REQUEST BODY:")
 	AddLogHelper("FINAL REQUEST BODY:", "info", &logs)
-	log.Println(cfg.Request.Body)
 	AddLogHelper(cfg.Request.Body, "success", &logs)
 
 	if cfg.Request.Body != "" {
-		log.Println("Request body exists")
 		AddLogHelper("Request body exists", "info", &logs)
 		bodyReader = strings.NewReader(cfg.Request.Body)
 	}
@@ -593,18 +543,15 @@ func RunKeywordCheck(
 	// 🔹 Create request
 	req, err := http.NewRequest(method, url, bodyReader)
 	if err != nil {
-		log.Println("❌ REQUEST BUILD ERROR:", err)
 		AddLogHelper(fmt.Sprintf("❌ REQUEST BUILD ERROR: %s", err), "error", &logs)
 		return "DOWN", 0, 0, logs, err
 	}
 
-	log.Println("✅ Request created")
 	AddLogHelper("✅ Request created", "success", &logs)
 
 	// 🔹 Add resolved headers
 	for k, v := range resolvedHeaders {
 		req.Header.Set(k, v)
-		log.Println("Header added:", k)
 		AddLogHelper(fmt.Sprintf("Header added: %s", k), "success", &logs)
 	}
 
@@ -618,17 +565,14 @@ func RunKeywordCheck(
 		Timeout: 10 * time.Second,
 	}
 
-	log.Println("🚀 Sending request...")
 	AddLogHelper("🚀 Sending request...", "info", &logs)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Println("❌ REQUEST ERROR:", err)
 		AddLogHelper(fmt.Sprintf("❌ REQUEST ERROR: %s", err), "error", &logs)
 		return "DOWN", 0, 0, logs, err
 	}
 
-	log.Println("✅ Response received:", resp.StatusCode)
 	AddLogHelper(fmt.Sprintf("✅ Response received: %d", resp.StatusCode), "success", &logs)
 
 	// 🔹 Read response safely
@@ -636,17 +580,14 @@ func RunKeywordCheck(
 	resp.Body.Close()
 
 	if err != nil {
-		log.Println("❌ RESPONSE READ ERROR:", err)
 		AddLogHelper(fmt.Sprintf("❌ RESPONSE READ ERROR: %s", err), "error", &logs)
 		return "DOWN", 0, 0, logs, err
 	}
 
 	body := string(bodyBytes)
-	log.Println("✅ Response body length:", len(body))
 	AddLogHelper(fmt.Sprintf("✅ Response body length: %d", len(body)), "info", &logs)
 
 	previewLen := min(500, len(body))
-	log.Println("📦 BODY PREVIEW:", body[:previewLen])
 	AddLogHelper(fmt.Sprintf("📦 BODY PREVIEW: %s", body[:previewLen]), "info", &logs)
 
 	bodyLower := strings.ToLower(body)
@@ -660,7 +601,6 @@ func RunKeywordCheck(
 	}
 
 	if statusCode != expectedStatus {
-		log.Println("❌ STATUS MISMATCH: expected:", expectedStatus, "got:", statusCode)
 		AddLogHelper(fmt.Sprintf("❌ STATUS MISMATCH: expected: %d got: %d", expectedStatus, statusCode), "error", &logs)
 		status = "DOWN"
 	}
@@ -668,26 +608,22 @@ func RunKeywordCheck(
 	// 🔍 MUST CONTAIN
 	for _, keyword := range cfg.Assertions.MustContain {
 		keyword = strings.TrimSpace(keyword)
-		log.Println("Checking mustContain:", keyword)
 		AddLogHelper(fmt.Sprintf("Checking mustContain: %s", keyword), "info", &logs)
 
 		if cfg.Assertions.UseRegex {
 			matched, err := regexp.MatchString(keyword, body)
 			if err != nil {
-				log.Println("❌ REGEX ERROR:", err)
 				AddLogHelper(fmt.Sprintf("❌ REGEX ERROR: %s", err), "error", &logs)
 				status = "DOWN"
 				break
 			}
 			if !matched {
-				log.Println("❌ REGEX NOT MATCHED:", keyword)
 				AddLogHelper(fmt.Sprintf("❌ REGEX NOT MATCHED: %s", keyword), "error", &logs)
 				status = "DOWN"
 				break
 			}
 		} else {
 			if !strings.Contains(bodyLower, strings.ToLower(keyword)) {
-				log.Println("❌ MUST CONTAIN FAILED:", keyword)
 				AddLogHelper(fmt.Sprintf("❌ MUST CONTAIN FAILED: %s", keyword), "error", &logs)
 				status = "DOWN"
 				break
@@ -698,26 +634,22 @@ func RunKeywordCheck(
 	// 🔍 MUST NOT CONTAIN
 	for _, keyword := range cfg.Assertions.MustNotContain {
 		keyword = strings.TrimSpace(keyword)
-		log.Println("Checking mustNotContain:", keyword)
 		AddLogHelper(fmt.Sprintf("Checking mustNotContain: %s", keyword), "info", &logs)
 
 		if cfg.Assertions.UseRegex {
 			matched, err := regexp.MatchString(keyword, body)
 			if err != nil {
-				log.Println("❌ REGEX ERROR:", err)
 				AddLogHelper(fmt.Sprintf("❌ REGEX ERROR: %s", err), "error", &logs)
 				status = "DOWN"
 				break
 			}
 			if matched {
-				log.Println("❌ MUST NOT CONTAIN MATCHED:", keyword)
 				AddLogHelper(fmt.Sprintf("❌ MUST NOT CONTAIN MATCHED: %s", keyword), "error", &logs)
 				status = "DOWN"
 				break
 			}
 		} else {
 			if strings.Contains(bodyLower, strings.ToLower(keyword)) {
-				log.Println("❌ MUST NOT CONTAIN FOUND:", keyword)
 				AddLogHelper(fmt.Sprintf("❌ MUST NOT CONTAIN FOUND: %s", keyword), "error", &logs)
 				status = "DOWN"
 				break
@@ -727,9 +659,7 @@ func RunKeywordCheck(
 
 	responseTime := time.Since(start).Milliseconds()
 
-	log.Println("✅ FINAL STATUS:", status)
 	AddLogHelper(fmt.Sprintf("✅ FINAL STATUS: %s", status), "info", &logs)
-	log.Println("⏱ RESPONSE TIME:", responseTime, "ms")
 	AddLogHelper(fmt.Sprintf("⏱ RESPONSE TIME: %d ms", responseTime), "info", &logs)
 
 	// 🔔 Alert handling
@@ -751,24 +681,17 @@ func RunPingCheck(
 
 	var logs []models.LogMessage
 
-	log.Println("===================================")
-	log.Println("RUNNING PING MONITOR")
 	AddLogHelper("RUNNING PING MONITOR", "info", &logs)
-	log.Println("Monitor ID:", monitor.ID)
 	AddLogHelper(fmt.Sprintf("Monitor ID: %s", monitor.ID), "info", &logs)
-	log.Println("Monitor URL:", monitor.URL)
 	AddLogHelper(fmt.Sprintf("Monitor URL: %s", monitor.URL), "info", &logs)
-	log.Println("===================================")
 
 	var cfg PingConfig
 	AddLogHelper("Parsing config", "info", &logs)
 	if err := json.Unmarshal(monitor.Config, &cfg); err != nil {
-		log.Println("❌ CONFIG PARSE ERROR:", err)
 		AddLogHelper(fmt.Sprintf("❌ CONFIG PARSE ERROR: %s", err), "error", &logs)
 		return "DOWN", 0, 0, logs, err
 	}
 
-	log.Println("✅ Config parsed successfully")
 	AddLogHelper("✅ Config parsed successfully", "success", &logs)
 
 	// 🔹 Defaults
@@ -776,7 +699,6 @@ func RunPingCheck(
 		cfg.Attempts = 5
 	}
 
-	log.Println("Ping attempts:", cfg.Attempts)
 	AddLogHelper(fmt.Sprintf("Ping attempts: %d", cfg.Attempts), "info", &logs)
 
 	host := cfg.Host
@@ -789,7 +711,6 @@ func RunPingCheck(
 	host = strings.TrimPrefix(host, "http://")
 	host = strings.Split(host, "/")[0]
 
-	log.Println("System ping host:", host)
 	AddLogHelper(fmt.Sprintf("System ping host: %s", host), "success", &logs)
 
 	// 🔹 OS-specific command
@@ -797,51 +718,41 @@ func RunPingCheck(
 
 	if runtime.GOOS == "windows" {
 		cmd = exec.Command("ping", "-n", strconv.Itoa(cfg.Attempts), host)
-		log.Println("🖥️ Using Windows ping command")
 		AddLogHelper("🖥️ Using Windows ping command", "info", &logs)
 	} else {
 		cmd = exec.Command("ping", "-c", strconv.Itoa(cfg.Attempts), host)
-		log.Println("🐧 Using Linux ping command")
 		AddLogHelper("🐧 Using Linux ping command", "info", &logs)
 	}
 
-	log.Println("🚀 Executing ping...")
 	AddLogHelper("🚀 Executing ping...", "info", &logs)
 
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		log.Println("❌ Ping command error:", err)
 		AddLogHelper(fmt.Sprintf("❌ Ping command error: %s", err), "error", &logs)
 	}
 
 	outStr := string(output)
-	log.Println("PING OUTPUT:\n", outStr)
 	AddLogHelper(fmt.Sprintf("PING OUTPUT:\n%s", outStr), "success", &logs)
 
 	// 🔍 Extract packet loss
 	packetLoss := extractPacketLoss(outStr)
-	log.Println("📦 Packet loss:", packetLoss, "%")
 	AddLogHelper(fmt.Sprintf("📦 Packet loss: %d%%", packetLoss), "info", &logs)
 
 	// 🔍 Extract avg latency
 	avgLatency := extractAvgLatency(outStr)
-	log.Println("⏱ Avg latency:", avgLatency, "ms")
 	AddLogHelper(fmt.Sprintf("⏱ Avg latency: %d ms", avgLatency), "info", &logs)
 
 	status := "UP"
 
 	if packetLoss == 100 {
 		status = "DOWN"
-		log.Println("❌ 100% packet loss — host unreachable")
 		AddLogHelper("❌ 100% packet loss — host unreachable", "error", &logs)
 	} else if packetLoss > 50 {
 		status = "DOWN"
-		log.Println("❌ Packet loss above 50% — marking as DOWN")
 		AddLogHelper(fmt.Sprintf("❌ Packet loss above 50%% (%d%%) — marking as DOWN", packetLoss), "error", &logs)
 	}
 
-	log.Println("✅ FINAL STATUS:", status)
 	AddLogHelper(fmt.Sprintf("✅ FINAL STATUS: %s", status), "info", &logs)
 
 	alertService.HandleStatusChange(monitor.ID, status)
@@ -922,12 +833,8 @@ type AssertionConfig struct {
 
 func RunSyntheticMonitor(config MonitorConfig, logs *[]models.LogMessage) (string, int64, error) {
 
-	log.Println("===================================")
-	log.Println("RUNNING SYNTHETIC MONITOR STEPS")
 	AddLogHelper("RUNNING SYNTHETIC MONITOR STEPS", "info", logs)
-	log.Println("Total steps:", len(config.Steps))
 	AddLogHelper(fmt.Sprintf("Total steps: %d", len(config.Steps)), "info", logs)
-	log.Println("===================================")
 
 	variables := make(map[string]string)
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -937,7 +844,6 @@ func RunSyntheticMonitor(config MonitorConfig, logs *[]models.LogMessage) (strin
 		log.Printf("▶️ Running step %d/%d: %s", i+1, len(config.Steps), step.Name)
 		AddLogHelper(fmt.Sprintf("▶️ Running step %d/%d: %s", i+1, len(config.Steps), step.Name), "info", logs)
 		log.Printf("BB")
-		log.Println(step)
 
 		// Replace variables in request
 		reqConfig := replaceVariablesInReq(step.Request, variables)
@@ -987,14 +893,7 @@ func RunSyntheticMonitor(config MonitorConfig, logs *[]models.LogMessage) (strin
 
 		// Assertions
 		if err := validateAssertions(step.Assertions, resp.StatusCode, bodyStr); err != nil {
-			// bodyBytes, err := io.ReadAll(resp.Body)
-			// if err != nil {
-			// 	log.Fatal(err)
-			// }
-
-			// fmt.Println("Status Code:", resp.StatusCode)
-			// fmt.Println("Response Body:")
-			// fmt.Println(string(bodyBytes))
+			
 			log.Printf("❌ Step %s: assertion failed: %v", step.Name, err)
 			AddLogHelper(fmt.Sprintf("❌ Step %s: assertion failed: %s", step.Name, err), "error", logs)
 			return "DOWN", 0, err
@@ -1021,9 +920,7 @@ func RunSyntheticMonitor(config MonitorConfig, logs *[]models.LogMessage) (strin
 
 	responseTime := time.Since(start).Milliseconds()
 
-	log.Println("✅ All steps completed")
 	AddLogHelper("✅ All steps completed", "success", logs)
-	log.Println("⏱ Total response time:", responseTime, "ms")
 	AddLogHelper(fmt.Sprintf("⏱ Total response time: %d ms", responseTime), "info", logs)
 
 	return "UP", responseTime, nil
@@ -1080,7 +977,6 @@ func replaceVariablesInReq(req RequestConfig, vars map[string]string) RequestCon
 		req.Headers[k] = replace(v)
 	}
 
-	// ✅ FIXED
 	if req.Body != "" {
 		req.Body = replace(req.Body)
 	}

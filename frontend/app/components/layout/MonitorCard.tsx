@@ -12,6 +12,7 @@ interface MonitorForm {
     showAdv: boolean;
     showToken: boolean;
     extract: Extract
+    authVariable: string
 }
 
 interface Extract {
@@ -58,15 +59,21 @@ const TextInput = ({ hasError, className = "", ...props }: TextInputProps) => (
 interface MonitorCardProps {
     monitor: MonitorForm;
     index: number;
+    previousMonitors: MonitorForm[];
     errors: FormErrors;
     canRemove: boolean;
-    onChange: (i: number, key: keyof MonitorForm | "variableName" | "path", value: string | boolean) => void;
+    onChange: (
+        i: number,
+        key: keyof MonitorForm | "variableName" | "path",
+        value: string | boolean
+    ) => void;
     onRemove: (i: number) => void;
 }
 const METHODS = ["GET", "POST", "PUT"] as const;
 const MonitorCard = ({
     monitor,
     index,
+    previousMonitors,
     errors,
     canRemove,
     onChange,
@@ -74,8 +81,11 @@ const MonitorCard = ({
 }: MonitorCardProps) => {
     const nameErr = errors[`name_${index}`];
     const urlErr = errors[`url_${index}`];
-   // const kwErr = errors[`kw_${index}`];
+    // const kwErr = errors[`kw_${index}`];
     const [error, setError] = useState("");
+    const availableVariables = previousMonitors
+        .filter((m) => m.extract.variableName.trim())
+        .map((m) => m.extract.variableName.trim());
     return (
         <div className="bg-slate-900/70 border border-slate-800 rounded-2xl overflow-hidden backdrop-blur-sm">
             {/* Card header */}
@@ -146,7 +156,7 @@ const MonitorCard = ({
                 <Field
                     label="Keywords"
                     description="Comma-separated. All must be present in the API response."
-                   // error={kwErr}
+                // error={kwErr}
                 >
                     <TextInput
                         type="text"
@@ -192,6 +202,24 @@ const MonitorCard = ({
                             </div>
                         </Field>
 
+                        <Field label="Authentication">
+                            <select
+                                value={monitor.authVariable}
+                                onChange={(e) =>
+                                    onChange(index, "authVariable", e.target.value)
+                                }
+                                className="w-full bg-slate-800/60 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-100"
+                            >
+                                <option value="">No authentication</option>
+
+                                {availableVariables.map((variable) => (
+                                    <option key={variable} value={variable}>
+                                        {variable}
+                                    </option>
+                                ))}
+                            </select>
+                        </Field>
+
                         {/* Auth Token */}
                         <Field label="Authorization Token">
                             <div className="flex gap-2">
@@ -234,9 +262,9 @@ const MonitorCard = ({
 
                                     {/* Variable path */}
                                     <div>
-                                            <label className="block text-xs font-semibold text-slate-400 mb-1.5">
-                                                JSON path
-                                            </label>
+                                        <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                                            JSON path
+                                        </label>
                                         <input
                                             type="text"
                                             value={monitor.extract.path}

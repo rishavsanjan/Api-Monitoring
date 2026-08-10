@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -31,7 +32,6 @@ func NewService(
 		),
 	}
 }
-
 
 func (s *Service) RunMonitorNow(id string) error {
 	return s.repo.RunMonitorNow(id)
@@ -73,8 +73,7 @@ func (s *Service) CreateMonitor(
 
 	monitorID := uuid.New().String()
 
-	// Extract + encrypt sensitive values
-	sanitizedConfig, secrets, err := ExtractSecrets(monitorType ,config)
+	sanitizedConfig, secrets, err := ExtractSecrets(monitorType, config)
 	if err != nil {
 		return err
 	}
@@ -88,7 +87,7 @@ func (s *Service) CreateMonitor(
 		}
 
 		secret := models.Secret{
-			ID: uuid.New().String(),
+			ID:             uuid.New().String(),
 			UserID:         userId,
 			MonitorID:      monitorID,
 			Key:            key,
@@ -137,12 +136,9 @@ func (s *Service) GetMonitorHistory(userId string, page int, monitorId string) (
 	return s.repo.GetMonitorHistory(userId, page, monitorId)
 }
 
-
-
 func (s *Service) GetIncidents(userId string, page int) ([]models.MonitorResult, error) {
 	return s.repo.GetIncidents(userId, page)
 }
-
 
 func ExtractSecrets(
 	monitorType string,
@@ -164,8 +160,6 @@ func ExtractSecrets(
 	}
 }
 
-
-
 func extractSyntheticSecrets(
 	config map[string]interface{},
 ) (map[string]interface{}, map[string]string, error) {
@@ -179,8 +173,7 @@ func extractSyntheticSecrets(
 
 	steps, ok := stepsRaw.([]interface{})
 	if !ok {
-		return nil, nil,
-			errors.New("invalid steps format")
+		return nil, nil, errors.New("invalid steps format")
 	}
 
 	for stepIndex, stepRaw := range steps {
@@ -197,14 +190,18 @@ func extractSyntheticSecrets(
 
 		request, ok := requestRaw.(map[string]interface{})
 		if !ok {
-			continue
+			return nil, nil, errors.New("invalid request format")
 		}
 
-		extractRequestSecrets(
+		err := extractSyntheticRequestSecrets(
 			request,
-			stepIndex,
+			fmt.Sprintf("step_%d", stepIndex),
 			secrets,
 		)
+
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	return config, secrets, nil
@@ -240,7 +237,6 @@ func extractKeywordSecrets(
 	return config, secrets, nil
 }
 
-
 func extractRequestSecrets(
 	request map[string]interface{},
 	prefix int,
@@ -268,8 +264,7 @@ func extractRequestSecrets(
 	}
 
 	// Encrypt Authorization header
-	if headersRaw, exists := request["headers"];
-		exists {
+	if headersRaw, exists := request["headers"]; exists {
 
 		headers, ok :=
 			headersRaw.(map[string]interface{})
@@ -301,4 +296,63 @@ func extractRequestSecrets(
 	return nil
 }
 
+func extractSyntheticRequestSecrets(
+	request map[string]interface{},
+	prefix string,
+	secrets map[string]string,
+) error {
 
+	// Encrypt entire body
+	if body, exists := request["body"]; exists && body != nil {
+
+		if bodyString, ok := body.(string); ok && bodyString == "" {
+			// Skip empty body
+		} else {
+			bodyBytes, err := json.Marshal(body)
+			if err != nil {
+				return err
+			}
+
+			secretKey := fmt.Sprintf("%s_body", prefix)
+
+			secrets[secretKey] = string(bodyBytes)
+
+			request["body"] = "{{" + secretKey + "}}"
+		}
+	}
+
+	// Handle Authorization header
+	if headersRaw, exists := request["headers"]; exists {
+
+		headers, ok := headersRaw.(map[string]interface{})
+		if !ok {
+			return errors.New("invalid headers format")
+		}
+
+		if auth, exists := headers["Authorization"]; exists {
+
+			authString, ok := auth.(string)
+			if !ok || authString == "" {
+				return nil
+			}
+
+			// If Authorization contains a runtime variable
+			// such as "Bearer {{token}}", don't encrypt it.
+			if strings.Contains(authString, "{{") {
+				return nil
+			}
+
+			secretKey := fmt.Sprintf(
+				"%s_authorization",
+				prefix,
+			)
+
+			secrets[secretKey] = authString
+
+			headers["Authorization"] =
+				"{{" + secretKey + "}}"
+		}
+	}
+
+	return nil
+}
