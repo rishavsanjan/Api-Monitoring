@@ -3,17 +3,20 @@ resource "aws_vpc" "api-vpc" {
 }
 
 resource "aws_subnet" "subnet-1" {
-  vpc_id     = aws_vpc.api-vpc.id
-  cidr_block = "10.0.1.0/24"
-
+  vpc_id                  = aws_vpc.api-vpc.id
+  cidr_block              = "10.0.1.0/24"
+  availability_zone       = "us-east-1a"
+  map_public_ip_on_launch = true
   tags = {
     Name = "api-subnet-1"
   }
 }
 
 resource "aws_subnet" "subnet-2" {
-  vpc_id     = aws_vpc.api-vpc.id
-  cidr_block = "10.0.2.0/24"
+  vpc_id                  = aws_vpc.api-vpc.id
+  cidr_block              = "10.0.2.0/24"
+  availability_zone       = "us-east-1b"
+  map_public_ip_on_launch = true
 
   tags = {
     Name = "api-subnet-2"
@@ -52,10 +55,19 @@ resource "aws_security_group" "api-sg-alb" {
 
 resource "aws_vpc_security_group_ingress_rule" "api-sg-rule-1" {
   security_group_id = aws_security_group.api-sg-alb.id
-  description       = "HTTP"
+  description       = "Allow public HTTP traffic"
   from_port         = 80
-  ip_protocol       = 80
+  to_port           = 80
+  ip_protocol       = "tcp"
   cidr_ipv4         = "0.0.0.0/0"
+}
+
+resource "aws_vpc_security_group_egress_rule" "api-alb-egress" {
+  security_group_id            = aws_security_group.api-sg-alb.id
+  referenced_security_group_id = aws_security_group.api-sg-ec2.id
+  from_port                    = 3000
+  to_port                      = 3000
+  ip_protocol                  = "tcp"
 }
 
 resource "aws_security_group" "api-sg-ec2" {
@@ -64,11 +76,13 @@ resource "aws_security_group" "api-sg-ec2" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "api-ec2-rule-1" {
-  security_group_id = aws_security_group.api-sg-ec2.id
-  description       = "HTTP"
-  from_port         = 3000
-  ip_protocol       = 3000
-  cidr_ipv4         = "0.0.0.0/0"
+  security_group_id            = aws_security_group.api-sg-ec2.id
+  referenced_security_group_id = aws_security_group.api-sg-alb.id
+  description                  = "Allow HTTP traffic from ALB"
+  from_port                    = 3000
+  to_port                      = 3000
+  ip_protocol                  = "tcp"
+  cidr_ipv4                    = "0.0.0.0/0"
 }
 
 resource "aws_instance" "api-server-1" {
@@ -91,7 +105,7 @@ resource "aws_instance" "api-server-2" {
   key_name               = "vm-key"
 
   tags = {
-    "Name" = "api-server-1"
+    "Name" = "api-server-2"
   }
 }
 
@@ -130,7 +144,7 @@ resource "aws_lb_target_group_attachment" "api-tga-2" {
 resource "aws_lb_listener" "api-lb-listener" {
   load_balancer_arn = aws_lb.api-load-balancer.arn
   port              = "80"
-  protocol          = "HTTPS"
+  protocol          = "HTTP"
 
   default_action {
     target_group_arn = aws_lb_target_group.api-tg.arn
@@ -142,8 +156,12 @@ output "ec2_public_ip_1" {
   value = aws_instance.api-server-1.public_ip
 }
 
-output "ec2_public_ip_1" {
+output "ec2_public_ip_2" {
   value = aws_instance.api-server-2.public_ip
+}
+
+output "load_balancer_dns" {
+  value = aws_lb.api-load-balancer.dns_name
 }
 
 
