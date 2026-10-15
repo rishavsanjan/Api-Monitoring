@@ -10,7 +10,6 @@ import { useParams } from "next/navigation";
 import { useState, useEffect, useRef, JSX } from "react";
 import { ClipLoader } from "react-spinners";
 
-// ── Types ──────────────────────────────────────────────────────────────────────
 
 interface LogEntry {
   time: string;
@@ -33,45 +32,6 @@ interface NodeStatus {
   pct: number;
   isDown: boolean;
 }
-
-// ── Data ───────────────────────────────────────────────────────────────────────
-
-const LOGS: LogEntry[] = [
-  {
-    time: "14:32:01",
-    level: "info",
-    message: `Initializing health check request to https://api.midnight.pulse/v1/status`,
-  },
-  {
-    time: "14:32:02",
-    level: "success",
-    message: `DNS resolution completed in 12ms. Resolved to IP 172.67.142.23`,
-  },
-  {
-    time: "14:32:04",
-    level: "error",
-    message: `TLS Handshake initiated... Peer closed connection prematurely. Retrying...`,
-  },
-  {
-    time: "14:32:34",
-    level: "fatal",
-    message: `Request timed out after 30000ms. Upstream server failed to respond. HTTP 504.`,
-    highlight: true,
-  },
-  {
-    time: "14:33:01",
-    level: "alert",
-    message: `Incident rule L1-CRIT-TIMEOUT triggered. Notifications dispatched.`,
-  },
-];
-
-const NODES: NodeStatus[] = [
-  { region: "San Francisco", latency: "22ms", pct: 98, isDown: false },
-  { region: "London", latency: "88ms", pct: 95, isDown: false },
-  { region: "Singapore", latency: null, pct: 0, isDown: true },
-];
-
-// ── SVG Icons ─────────────────────────────────────────────────────────────────
 
 const Ic = {
   pulse: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>,
@@ -96,10 +56,7 @@ const Ic = {
   login: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" /></svg>,
 };
 
-// ── Log level helpers ─────────────────────────────────────────────────────────
 
-
-// ── Toast ─────────────────────────────────────────────────────────────────────
 
 function Toast({ message, visible }: { message: string; visible: boolean }) {
   return (
@@ -118,18 +75,15 @@ function Toast({ message, visible }: { message: string; visible: boolean }) {
 
 
 
-// ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function IncidentDetail() {
   const [toast, setToast] = useState({ visible: false, message: "" });
-  const [elapsedSeconds, setElapsedSeconds] = useState(14 * 60 + 32);
   const logRef = useRef<HTMLDivElement>(null);
 
   const params = useParams();
   const id = params.id as string;
 
 
-  // Auto-scroll log to bottom on mount
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, []);

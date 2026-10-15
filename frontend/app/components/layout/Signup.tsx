@@ -117,7 +117,7 @@ const SignupPage = ({ onSwitch }: { onSwitch: () => void }) => {
             {/* Heading */}
             <div className="flex flex-col gap-2 text-center">
                 <h1 className="text-3xl font-bold tracking-tight text-white">Create your account</h1>
-                <p className="text-slate-400 text-sm">Start monitoring your APIs in minutes — no credit card required</p>
+                <p className="text-slate-400 text-sm">Start monitoring your APIs in minutes</p>
             </div>
 
             {/* Card */}
