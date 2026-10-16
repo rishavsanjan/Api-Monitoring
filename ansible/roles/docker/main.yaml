@@ -1,0 +1,11 @@
+- name:  Install docker
+  apt:
+    name=docker.io
+    state=latest
+    update_cache=true
+
+- name: Start docker
+  service:
+    name=docker
+    state=started
+    enabled=true

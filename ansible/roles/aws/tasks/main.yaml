@@ -1,0 +1,4 @@
+- name: install and check for awscli
+  apt:
+    name=awscli
+    state=latest

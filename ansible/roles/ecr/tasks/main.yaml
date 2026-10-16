@@ -1,0 +1,32 @@
+- name: login into ecr and pull image
+  shell:
+    aws ecr get-login-password --region {{ aws_region }} |
+    docker login --username AWS --password-stdin {{ ecr_registry }}
+
+- name: pull frontend docker image
+  community.docker.docker_image:
+    name: "{{ ecr_registry }}/{{ image_name_frontend }}:{{ image_tag_frontend }}"
+    source: pull
+
+- name: pull backend docker image
+  community.docker.docker_image:
+    name: "{{ ecr_registry }}/{{ image_name_backend }}:{{ image_tag_backend }}"
+    source: pull
+
+- name: Run frontend container
+  community.docker.docker_container:
+    name: frontend
+    image: "{{ ecr_registry }}/{{ image_name_frontend }}:{{ image_tag_frontend }}"
+    state: started
+    restart_policy: always
+    ports:
+      - "3000:3000"
+
+- name: Run backend container
+  community.docker.docker_container:
+    name: backend
+    image: "{{ ecr_registry }}/{{ image_name_backend }}:{{ image_tag_backend }}"
+    state: started
+    restart_policy: always
+    ports:
+      - "5000:5000"
