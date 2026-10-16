@@ -22,7 +22,6 @@ pipeline {
                     dir('backend') {
                         sh 'go mod download' 
                     }
-                    
                 }
             }
         }
@@ -46,12 +45,19 @@ pipeline {
                 echo 'Pushing images onto ECR'
 
                 sh '''
+                    echo "Initializing Terraform..."
+                    
+
                     export AWS_DEFAULT_REGION=us-east-1
 
                     aws sts get-caller-identity
+                    terraform init -input = false
+
+                    REPO_1_URI = $(terraform output -raw ecr_frontend_repo_arn)
+                    REPO_2_URI = $(terraform output -raw ecr_backend_repo_arn)
 
                     aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 945945134870.dkr.ecr.us-east-1.amazonaws.com
-                    ocker tag api-monitoring-backend:latest 945945134870.dkr.ecr.us-east-1.amazonaws.com/devops-cloud-p1-backend:latest
+                    docker tag api-monitoring-backend:latest 945945134870.dkr.ecr.us-east-1.amazonaws.com/devops-cloud-p1-backend:latest
                     docker push 945945134870.dkr.ecr.us-east-1.amazonaws.com/api-monitoring-backend:latest
 
                     docker tag api-monitoring-frontend:latest 945945134870.dkr.ecr.us-east-1.amazonaws.com/devops-cloud-p1-frontend:latest

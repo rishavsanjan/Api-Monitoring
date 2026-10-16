@@ -152,6 +152,24 @@ resource "aws_lb_listener" "api-lb-listener" {
   }
 }
 
+resource "aws_ecr_repository" "api-monitoring-ecr-repositry-frontend" {
+  name = "api-monitoring-ecr-repositry-frontend"
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+
+resource "aws_ecr_repository" "api-monitoring-ecr-repositry-backend" {
+  name = "api-monitoring-ecr-repositry-backend"
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+
 output "ec2_public_ip_1" {
   value = aws_instance.api-server-1.public_ip
 }
@@ -162,6 +180,14 @@ output "ec2_public_ip_2" {
 
 output "load_balancer_dns" {
   value = aws_lb.api-load-balancer.dns_name
+}
+
+output "ecr_frontend_repo_arn" {
+  value = aws_ecr_repository.api-monitoring-ecr-repositry-frontend
+}
+
+output "ecr_backend_repo_arn" {
+  value = aws_ecr_repository.api-monitoring-ecr-repositry-backend
 }
 
 
