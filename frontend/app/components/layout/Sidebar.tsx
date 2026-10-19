@@ -17,7 +17,7 @@ const navItems: NavItem[] = [
     { label: "Incidents", icon: <IconIncidents />, link: '/incidents' },
     { label: "Create", icon: <IconPlus />, link: '/http' },
     { label: "Profile", icon: <IconUser />, link: '/profile' },
-    { label: "Settings", icon: <IconSettings />, link: '/create-monitor' },
+    { label: "Settings", icon: <IconSettings />, link: '/create-monitor'},
 ];
 
 export default function Sidebar() {

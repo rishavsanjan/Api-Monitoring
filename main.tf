@@ -82,8 +82,18 @@ resource "aws_vpc_security_group_ingress_rule" "api-ec2-rule-1" {
   from_port                    = 3000
   to_port                      = 3000
   ip_protocol                  = "tcp"
-  cidr_ipv4                    = "0.0.0.0/0"
 }
+
+resource "aws_vpc_security_group_ingress_rule" "api-ec2-ssh" {
+  security_group_id = aws_security_group.api-sg-ec2.id
+
+  description = "SSH from Jenkins agent"
+  from_port   = 22
+  to_port     = 22
+  ip_protocol = "tcp"
+  cidr_ipv4   = "0.0.0.0/0"
+}
+
 
 resource "aws_instance" "api-server-1" {
   ami                    = "ami-0b6d9d3d33ba97d99"
@@ -182,12 +192,12 @@ output "load_balancer_dns" {
   value = aws_lb.api-load-balancer.dns_name
 }
 
-output "ecr_frontend_repo_arn" {
-  value = aws_ecr_repository.api-monitoring-ecr-repositry-frontend
+output "ecr_frontend_repo_uri" {
+  value = aws_ecr_repository.api-monitoring-ecr-repositry-frontend.uri
 }
 
-output "ecr_backend_repo_arn" {
-  value = aws_ecr_repository.api-monitoring-ecr-repositry-backend
+output "ecr_backend_repo_uri" {
+  value = aws_ecr_repository.api-monitoring-ecr-repositry-backend.uri
 }
 
 

@@ -1,137 +1,139 @@
+
 pipeline {
-    agents any
+    agent any
+
     tools {
         nodejs 'nodejs'
         go 'go'
     }
+
+    environment {
+        AWS_DEFAULT_REGION = 'us-east-1'
+    }
+
     stages {
         stage('Checkout') {
             steps {
                 git branch: 'main',
-                url: 'https://github.com/rishavsanjan/api-monitoring'
+                    url: 'https://github.com/rishavsanjan/api-monitoring'
             }
         }
+
         stage('Build services') {
             parallel {
-                stage('Build backend') {
-                    dir('frontend') {
-                        sh 'npm install'
+                stage('Build frontend') {
+                    steps {
+                        dir('frontend') {
+                            sh 'npm ci'
+                            sh 'npm run build'
+                        }
                     }
                 }
+
                 stage('Build backend') {
-                    dir('backend') {
-                        sh 'go mod download' 
+                    steps {
+                        dir('backend') {
+                            sh 'go mod download'
+                            sh 'go test ./...'
+                        }
                     }
                 }
             }
         }
+
         stage('Docker image build') {
             steps {
-                echo 'Building docker images'
                 sh 'docker compose build'
-                echo 'docker images built successfully'
             }
         }
-    }
-    stage('AWS login and image push onto ecr') {
-        steps {
-            withCredentials([
-                usernamePassword(
-                    credentialsId: 'aws-jenkins',
-                    usernameVariable: 'AWS_ACCESS_KEY_ID',
-                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-                )
-            ]) {
-                echo 'Pushing images onto ECR'
 
-                sh '''
-                    echo "Initializing Terraform..."
-                    
+        stage('AWS login and push to ECR') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'aws-jenkins',
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    )
+                ]) {
+                    sh '''
+                        set -eu
 
-                    export AWS_DEFAULT_REGION=us-east-1
+                        aws sts get-caller-identity
 
-                    aws sts get-caller-identity
-                    terraform init -input = false
+                        terraform init -input=false
 
-                    REPO_1_URI = $(terraform output -raw ecr_frontend_repo_arn)
-                    REPO_2_URI = $(terraform output -raw ecr_backend_repo_arn)
+                        FRONTEND_REPO_URI=$(terraform output -raw ecr_frontend_repo_uri)
+                        BACKEND_REPO_URI=$(terraform output -raw ecr_backend_repo_uri)
 
-                    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 945945134870.dkr.ecr.us-east-1.amazonaws.com
-                    docker tag api-monitoring-backend:latest 945945134870.dkr.ecr.us-east-1.amazonaws.com/devops-cloud-p1-backend:latest
-                    docker push 945945134870.dkr.ecr.us-east-1.amazonaws.com/api-monitoring-backend:latest
+                        aws ecr get-login-password \
+                          --region "$AWS_DEFAULT_REGION" |
+                          docker login \
+                            --username AWS \
+                            --password-stdin \
+                            "$(echo "$FRONTEND_REPO_URI" | cut -d/ -f1)"
 
-                    docker tag api-monitoring-frontend:latest 945945134870.dkr.ecr.us-east-1.amazonaws.com/devops-cloud-p1-frontend:latest
-                    docker push 945945134870.dkr.ecr.us-east-1.amazonaws.com/devops-cloud-p1-frontend:latest
-                '''
+                        docker tag api-monitoring-frontend:latest \
+                          "$FRONTEND_REPO_URI:latest"
 
-                echo 'Images pushed successfully!'
+                        docker tag api-monitoring-backend:latest \
+                          "$BACKEND_REPO_URI:latest"
+
+                        docker push "$FRONTEND_REPO_URI:latest"
+                        docker push "$BACKEND_REPO_URI:latest"
+                    '''
+                }
             }
         }
-    }
 
-    stage('Generate ansible inventory') {
-        steps {
-            withCredentials([
-                usernamePassword(
-                    credentialsId: 'aws-jenkins',
-                    usernameVariable: 'AWS_ACCESS_KEY_ID',
-                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-                )
-            ]) {
+        stage('Generate Ansible inventory') {
+            steps {
                 sh '''
-                   export AWS_DEFAULT_REGION=us-east-1
+                    set -eu
 
-                   echo "Initializing Terraform..."
+                    terraform init -input=false
 
-                   terraform init -input = false
-                    EC2_1_IP=$(terraform output -raw ec2_1_public_ip)
-                   EC2_2_IP=$(terraform output -raw ec2_2_public_ip)
+                    EC2_1_IP=$(terraform output -raw ec2_public_ip_1)
+                    EC2_2_IP=$(terraform output -raw ec2_public_ip_2)
 
-                   EC2_1_IP=$(terraform output -raw ec2_1_public_ip)
-                   EC2_2_IP=$(terraform output -raw ec2_2_public_ip)
-                   printf '[aws_vm]\\nserver1 ansible_host=%s\\nserver2 ansible_host=%s\\n' \
-                       "$EC2_1_IP" "$EC2_2_IP" \
-                       > ansible/myinventory.ini
-                   echo "Generated Ansible inventory:"
-                   cat ansible/myinventory.ini
-                   echo "Validating Ansible inventory..."
-                   ansible-inventory \
-                       -i ansible/myinventory.ini \
-                       --graph
+                    printf '[aws_vm]\\nserver1 ansible_host=%s\\nserver2 ansible_host=%s\\n' \
+                      "$EC2_1_IP" "$EC2_2_IP" \
+                      > ansible/myinventory.ini
 
+                    ansible-inventory \
+                      -i ansible/myinventory.ini \
+                      --graph
                 '''
             }
         }
-    }
-    stage('Deploy with ansible') {
+
+        stage('Deploy with Ansible') {
             steps {
                 withCredentials([
                     file(credentialsId: 'vm-key', variable: 'SSH_KEY')
                 ]) {
                     sh '''
+                        set -eu
                         chmod 400 "$SSH_KEY"
-
-                        echo "Testing Ansible connectivity..."
 
                         ANSIBLE_HOST_KEY_CHECKING=False \
                         ansible \
-                        -i ansible/myinventory.ini \
-                        all \
-                        -u ubuntu \
-                        --private-key "$SSH_KEY" \
-                        -m ping
-
-                        echo "Deploying application..."
+                          -i ansible/myinventory.ini \
+                          all \
+                          -u ubuntu \
+                          --private-key "$SSH_KEY" \
+                          -m ping
 
                         ANSIBLE_HOST_KEY_CHECKING=False \
                         ansible-playbook \
-                        -i ansible/myinventory.ini \
-                        -u ubuntu \
-                        --private-key "$SSH_KEY" \
-                        ansible/playbook.yaml
+                          -i ansible/myinventory.ini \
+                          -u ubuntu \
+                          --private-key "$SSH_KEY" \
+                          ansible/playbook.yaml
                     '''
                 }
             }
+        }
     }
 
     post {
@@ -142,7 +144,7 @@ pipeline {
             echo 'All stages passed successfully!'
         }
         failure {
-            echo 'Pipeline failed. Check stage logs for errors.'
+            echo 'Pipeline failed. Check stage logs.'
         }
     }
 }
