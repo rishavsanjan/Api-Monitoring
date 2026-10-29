@@ -24,8 +24,7 @@ pipeline {
                 stage('Build frontend') {
                     steps {
                         dir('frontend') {
-                            sh 'npm ci'
-                            sh 'npm run build'
+                            sh 'npm install'
                         }
                     }
                 }
@@ -41,11 +40,27 @@ pipeline {
             }
         }
 
+        
         stage('Docker image build') {
             steps {
-                sh 'docker compose build'
+                withCredentials([
+                    string(credentialsId: 'DATABASE_URL', variable: 'DATABASE_URL'),
+                    string(credentialsId: 'JWT_SECRET', variable: 'JWT_SECRET'),
+                    string(credentialsId: 'SMTP_USER', variable: 'SMTP_USER'),
+                    string(credentialsId: 'SMTP_HOST', variable: 'SMTP_HOST'),
+                    string(credentialsId: 'SMTP_PASS', variable: 'SMTP_PASS'),
+                    string(credentialsId: 'ENCRYPTION_KEY', variable: 'ENCRYPTION_KEY')
+                ]) {
+                    sh '''
+                        set -eu
+        
+                        docker compose config --quiet
+                        docker compose build
+                    '''
+                }
             }
         }
+
 
         stage('AWS login and push to ECR') {
             steps {
