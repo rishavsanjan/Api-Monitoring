@@ -80,6 +80,9 @@ pipeline {
 
                         FRONTEND_REPO_URI=$(terraform output -raw ecr_frontend_repo_uri)
                         BACKEND_REPO_URI=$(terraform output -raw ecr_backend_repo_uri)
+                        
+                        test -n "$FRONTEND_REPO_URI"
+                        test -n "$BACKEND_REPO_URI"
 
                         aws ecr get-login-password \
                           --region "$AWS_DEFAULT_REGION" |

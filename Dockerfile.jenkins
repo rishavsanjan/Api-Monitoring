@@ -7,7 +7,21 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         docker-cli \
         docker-compose \
-        libatomic1 && \
+        awscli \
+        ansible \
+        libatomic1 \
+        ca-certificates \
+        gnupg \
+        wget && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN wget -O- https://apt.releases.hashicorp.com/gpg \
+    | gpg --dearmor \
+    -o /usr/share/keyrings/hashicorp-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com trixie main" \
+    > /etc/apt/sources.list.d/hashicorp.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends terraform && \
     rm -rf /var/lib/apt/lists/*
 
 USER jenkins
