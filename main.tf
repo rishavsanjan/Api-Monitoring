@@ -101,6 +101,7 @@ resource "aws_instance" "api-server-1" {
   vpc_security_group_ids = [aws_security_group.api-sg-ec2.id]
   subnet_id              = aws_subnet.subnet-1.id
   key_name               = "vm-key"
+  associate_public_ip_address = true
 
   tags = {
     "Name" = "api-server-1"
@@ -113,6 +114,7 @@ resource "aws_instance" "api-server-2" {
   vpc_security_group_ids = [aws_security_group.api-sg-ec2.id]
   subnet_id              = aws_subnet.subnet-2.id
   key_name               = "vm-key"
+  associate_public_ip_address = true
 
   tags = {
     "Name" = "api-server-2"
@@ -163,7 +165,7 @@ resource "aws_lb_listener" "api-lb-listener" {
 }
 
 resource "aws_ecr_repository" "api-monitoring-ecr-repositry-frontend" {
-  name = "api-monitoring-ecr-repositry-frontend"
+  name                 = "api-monitoring-ecr-repositry-frontend"
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
@@ -172,7 +174,7 @@ resource "aws_ecr_repository" "api-monitoring-ecr-repositry-frontend" {
 }
 
 resource "aws_ecr_repository" "api-monitoring-ecr-repositry-backend" {
-  name = "api-monitoring-ecr-repositry-backend"
+  name                 = "api-monitoring-ecr-repositry-backend"
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
@@ -193,11 +195,11 @@ output "load_balancer_dns" {
 }
 
 output "ecr_frontend_repo_uri" {
-  value = aws_ecr_repository.api-monitoring-ecr-repositry-frontend.uri
+  value = aws_ecr_repository.api-monitoring-ecr-repositry-frontend.repository_url
 }
 
 output "ecr_backend_repo_uri" {
-  value = aws_ecr_repository.api-monitoring-ecr-repositry-backend.uri
+  value = aws_ecr_repository.api-monitoring-ecr-repositry-backend.repository_url
 }
 
 

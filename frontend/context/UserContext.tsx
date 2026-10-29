@@ -43,7 +43,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
                     return
                 }
 
-                const res = await axios.get("http://localhost:8080/api/me", {
+                const res = await axios.get("http://localhost:5000/api/me", {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     },

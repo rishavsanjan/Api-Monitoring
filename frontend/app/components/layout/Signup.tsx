@@ -86,7 +86,7 @@ const SignupPage = ({ onSwitch }: { onSwitch: () => void }) => {
         mutationKey: ['register'],
         mutationFn: async () => {
             const res = await axios({
-                url: `http://localhost:8080/api/register`,
+                url: `http://localhost:5000/api/register`,
                 method: 'post',
                 data: {
                     email: form.email,

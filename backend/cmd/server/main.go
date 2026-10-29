@@ -20,7 +20,7 @@ func main() {
 	go worker.StartScheduler()
 
 	r := router.SetupRouter()
-	log.Println("Server running on port 8080")
+	log.Println("Server running on port 5000")
 
-	r.Run(":8080")
+	r.Run(":5000")
 }

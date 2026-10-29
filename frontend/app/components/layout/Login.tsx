@@ -63,7 +63,7 @@ const LoginPage = ({ onSwitch }: { onSwitch: () => void }) => {
         mutationFn: async () => {
 
             const res = await axios({
-                url: `http://localhost:8080/api/login`,
+                url: `http://localhost:5000/api/login`,
                 method: 'post',
                 data: {
                     email: form.email,

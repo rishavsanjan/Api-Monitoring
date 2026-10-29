@@ -81,7 +81,7 @@ export default function MonitorDetailPage() {
         const token = localStorage.getItem("api");
 
         const socket = new WebSocket(
-            `ws://localhost:8080/ws?token=${token}`
+            `ws://localhost:5000/ws?token=${token}`
         );
 
         socket.onmessage = async (event) => {
