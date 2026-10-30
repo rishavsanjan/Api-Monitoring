@@ -1,9 +1,7 @@
 aws_region: "us-east-1"
 ecr_registry: "945945134870.dkr.ecr.us-east-1.amazonaws.com"
-image_name_frontend: "devops-cloud-p1-frontend"
-image_name_backend: "devops-cloud-p1-backend"
+frontend_image: "api-monitoring-ecr-repositry-frontend:latest"
 
-image_tag_frontend: "latest"
-image_tag_backend: "latest"
+backend_image: "api-monitoring-ecr-repositry-backend:latest"
 
 ansible_user: "ubuntu"
