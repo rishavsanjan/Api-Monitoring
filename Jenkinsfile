@@ -106,22 +106,34 @@ pipeline {
 
         stage('Generate Ansible inventory') {
             steps {
-                sh '''
-                    set -eu
-
-                    terraform init -input=false
-
-                    EC2_1_IP=$(terraform output -raw ec2_public_ip_1)
-                    EC2_2_IP=$(terraform output -raw ec2_public_ip_2)
-
-                    printf '[aws_vm]\\nserver1 ansible_host=%s\\nserver2 ansible_host=%s\\n' \
-                      "$EC2_1_IP" "$EC2_2_IP" \
-                      > ansible/myinventory.ini
-
-                    ansible-inventory \
-                      -i ansible/myinventory.ini \
-                      --graph
-                '''
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'aws-jenkins',
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    )
+                ]) {
+                    sh '''
+                        set -eu
+        
+                        export AWS_DEFAULT_REGION=us-east-1
+        
+                        aws sts get-caller-identity
+        
+                        terraform init -input=false
+        
+                        EC2_1_IP=$(terraform output -raw ec2_public_ip_1)
+                        EC2_2_IP=$(terraform output -raw ec2_public_ip_2)
+        
+                        printf '[aws_vm]\\nserver1 ansible_host=%s\\nserver2 ansible_host=%s\\n' \
+                            "$EC2_1_IP" "$EC2_2_IP" \
+                            > ansible/myinventory.ini
+        
+                        ansible-inventory \
+                            -i ansible/myinventory.ini \
+                            --graph
+                    '''
+                }
             }
         }
 

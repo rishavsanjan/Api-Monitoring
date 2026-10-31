@@ -1,7 +1,9 @@
 aws_region: "us-east-1"
 ecr_registry: "945945134870.dkr.ecr.us-east-1.amazonaws.com"
-frontend_image: "api-monitoring-ecr-repositry-frontend:latest"
+image_name_frontend: "api-monitoring-ecr-repositry-frontend"
 
-backend_image: "api-monitoring-ecr-repositry-backend:latest"
+image_name_backend: "api-monitoring-ecr-repositry-backend"
+image_tag_frontend: "latest"
+image_tag_backend: "latest"
 
 ansible_user: "ubuntu"

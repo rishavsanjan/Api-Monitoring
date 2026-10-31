@@ -94,6 +94,15 @@ resource "aws_vpc_security_group_ingress_rule" "api-ec2-ssh" {
   cidr_ipv4   = "0.0.0.0/0"
 }
 
+data "aws_iam_role" "ec2_role" {
+  name = "pipeline-devops-ec2-role"
+}
+
+resource "aws_iam_instance_profile" "ec2_profile" {
+  name = "pipeline-devops-ec2-profile"
+  role = data.aws_iam_role.ec2_role.name
+}
+
 
 resource "aws_instance" "api-server-1" {
   ami                    = "ami-0b6d9d3d33ba97d99"
@@ -102,6 +111,9 @@ resource "aws_instance" "api-server-1" {
   subnet_id              = aws_subnet.subnet-1.id
   key_name               = "vm-key"
   associate_public_ip_address = true
+  iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
+
+  user_data = file("initial_script.sh")
 
   tags = {
     "Name" = "api-server-1"
@@ -115,6 +127,9 @@ resource "aws_instance" "api-server-2" {
   subnet_id              = aws_subnet.subnet-2.id
   key_name               = "vm-key"
   associate_public_ip_address = true
+  iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
+
+  user_data = file("initial_script.sh")
 
   tags = {
     "Name" = "api-server-2"
@@ -167,6 +182,7 @@ resource "aws_lb_listener" "api-lb-listener" {
 resource "aws_ecr_repository" "api-monitoring-ecr-repositry-frontend" {
   name                 = "api-monitoring-ecr-repositry-frontend"
   image_tag_mutability = "MUTABLE"
+  force_delete = true
 
   image_scanning_configuration {
     scan_on_push = true
@@ -176,6 +192,7 @@ resource "aws_ecr_repository" "api-monitoring-ecr-repositry-frontend" {
 resource "aws_ecr_repository" "api-monitoring-ecr-repositry-backend" {
   name                 = "api-monitoring-ecr-repositry-backend"
   image_tag_mutability = "MUTABLE"
+  force_delete = true
 
   image_scanning_configuration {
     scan_on_push = true
