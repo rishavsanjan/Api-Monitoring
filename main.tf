@@ -70,6 +70,14 @@ resource "aws_vpc_security_group_egress_rule" "api-alb-egress" {
   ip_protocol                  = "tcp"
 }
 
+resource "aws_vpc_security_group_egress_rule" "api-ec2-egress" {
+  security_group_id = aws_security_group.api-sg-ec2.id
+
+  description = "Allow outbound internet traffic"
+  cidr_ipv4   = "0.0.0.0/0"
+  ip_protocol = "-1"
+}
+
 resource "aws_security_group" "api-sg-ec2" {
   name   = "api-mobitoring-security-group-ec2"
   vpc_id = aws_vpc.api-vpc.id
@@ -104,37 +112,6 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 }
 
 
-resource "aws_instance" "api-server-1" {
-  ami                    = "ami-0b6d9d3d33ba97d99"
-  instance_type          = "t2.micro"
-  vpc_security_group_ids = [aws_security_group.api-sg-ec2.id]
-  subnet_id              = aws_subnet.subnet-1.id
-  key_name               = "vm-key"
-  associate_public_ip_address = true
-  iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
-
-  user_data = file("initial_script.sh")
-
-  tags = {
-    "Name" = "api-server-1"
-  }
-}
-
-resource "aws_instance" "api-server-2" {
-  ami                    = "ami-0b6d9d3d33ba97d99"
-  instance_type          = "t2.micro"
-  vpc_security_group_ids = [aws_security_group.api-sg-ec2.id]
-  subnet_id              = aws_subnet.subnet-2.id
-  key_name               = "vm-key"
-  associate_public_ip_address = true
-  iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
-
-  user_data = file("initial_script.sh")
-
-  tags = {
-    "Name" = "api-server-2"
-  }
-}
 
 resource "aws_lb" "api-load-balancer" {
   name               = "api-monitoring-load-balancer"
@@ -156,17 +133,7 @@ resource "aws_lb_target_group" "api-tg" {
   }
 }
 
-resource "aws_lb_target_group_attachment" "api-tga-1" {
-  target_group_arn = aws_lb_target_group.api-tg.arn
-  target_id        = aws_instance.api-server-1.id
-  port             = 3000
-}
 
-resource "aws_lb_target_group_attachment" "api-tga-2" {
-  target_group_arn = aws_lb_target_group.api-tg.arn
-  target_id        = aws_instance.api-server-2.id
-  port             = 3000
-}
 
 resource "aws_lb_listener" "api-lb-listener" {
   load_balancer_arn = aws_lb.api-load-balancer.arn
@@ -182,7 +149,7 @@ resource "aws_lb_listener" "api-lb-listener" {
 resource "aws_ecr_repository" "api-monitoring-ecr-repositry-frontend" {
   name                 = "api-monitoring-ecr-repositry-frontend"
   image_tag_mutability = "MUTABLE"
-  force_delete = true
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = true
@@ -192,31 +159,47 @@ resource "aws_ecr_repository" "api-monitoring-ecr-repositry-frontend" {
 resource "aws_ecr_repository" "api-monitoring-ecr-repositry-backend" {
   name                 = "api-monitoring-ecr-repositry-backend"
   image_tag_mutability = "MUTABLE"
-  force_delete = true
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = true
   }
 }
 
-output "ec2_public_ip_1" {
-  value = aws_instance.api-server-1.public_ip
+
+
+resource "aws_launch_template" "api_launch_template" {
+  name_prefix   = "api-monitoring-"
+  image_id      = "ami-0b6d9d3d33ba97d99"
+  instance_type = "t2.micro"
+  key_name      = "vm-key"
+
+  iam_instance_profile {
+    name = aws_iam_instance_profile.ec2_profile.name
+  }
+
+  network_interfaces {
+    device_index                = 0
+    associate_public_ip_address = true
+
+    security_groups = [
+      aws_security_group.api-sg-ec2.id
+    ]
+  }
+
+  user_data = base64encode(
+    file("initial_script.sh")
+  )
+
+  tag_specifications {
+    resource_type = "instance"
+
+    tags = {
+      Name = "api-monitoring-asg-instance"
+    }
+  }
 }
 
-output "ec2_public_ip_2" {
-  value = aws_instance.api-server-2.public_ip
-}
 
-output "load_balancer_dns" {
-  value = aws_lb.api-load-balancer.dns_name
-}
-
-output "ecr_frontend_repo_uri" {
-  value = aws_ecr_repository.api-monitoring-ecr-repositry-frontend.repository_url
-}
-
-output "ecr_backend_repo_uri" {
-  value = aws_ecr_repository.api-monitoring-ecr-repositry-backend.repository_url
-}
 
 
