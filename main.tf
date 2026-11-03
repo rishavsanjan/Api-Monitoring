@@ -179,9 +179,9 @@ variable "app_secret_arn" {
 }
 
 variable "aws_region" {
-
-  description = "AWS region"
+  description = "AWS deployment region"
   type        = string
+  default     = "us-east-1"
 }
 
 resource "aws_launch_template" "api_launch_template" {
