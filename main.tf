@@ -168,6 +168,22 @@ resource "aws_ecr_repository" "api-monitoring-ecr-repositry-backend" {
 
 
 
+variable "image_tag" {
+  description = "Docker image version"
+  type        = string
+}
+
+variable "app_secret_arn" {
+  description = "Secrets Manager secret ARN"
+  type        = string
+}
+
+variable "aws_region" {
+
+  description = "AWS region"
+  type        = string
+}
+
 resource "aws_launch_template" "api_launch_template" {
   name_prefix   = "api-monitoring-"
   image_id      = "ami-0b6d9d3d33ba97d99"
@@ -181,14 +197,17 @@ resource "aws_launch_template" "api_launch_template" {
   network_interfaces {
     device_index                = 0
     associate_public_ip_address = true
-
-    security_groups = [
-      aws_security_group.api-sg-ec2.id
-    ]
+    security_groups             = [aws_security_group.api-sg-ec2.id]
   }
 
   user_data = base64encode(
-    file("initial_script.sh")
+    templatefile("${path.module}/user_data.sh", {
+      aws_region        = var.aws_region
+      frontend_repo_uri = aws_ecr_repository.api-monitoring-ecr-repositry-frontend.repository_url
+      backend_repo_uri  = aws_ecr_repository.api-monitoring-ecr-repositry-backend.repository_url
+      image_tag         = var.image_tag
+      app_secret_arn    = var.app_secret_arn
+    })
   )
 
   tag_specifications {
