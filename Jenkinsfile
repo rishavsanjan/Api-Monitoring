@@ -112,28 +112,56 @@ pipeline {
                         usernameVariable: 'AWS_ACCESS_KEY_ID',
                         passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                     )
-                ]) {
+                ]) 
+                {
                     sh '''
                         set -eu
-        
+                
                         export AWS_DEFAULT_REGION=us-east-1
-        
+                
                         aws sts get-caller-identity
-        
+                
                         terraform init -input=false
-        
-                        EC2_1_IP=$(terraform output -raw ec2_public_ip_1)
-                        EC2_2_IP=$(terraform output -raw ec2_public_ip_2)
-        
-                        printf '[aws_vm]\\nserver1 ansible_host=%s\\nserver2 ansible_host=%s\\n' \
-                            "$EC2_1_IP" "$EC2_2_IP" \
-                            > ansible/myinventory.ini
-        
+                
+                        ASG_NAME=$(terraform output -raw autoscaling_group_name)
+                
+                        INSTANCE_IDS=$(aws autoscaling describe-auto-scaling-groups \
+                            --auto-scaling-group-names "$ASG_NAME" \
+                            --query "AutoScalingGroups[0].Instances[?LifecycleState=='InService'].InstanceId" \
+                            --output text)
+                
+                        if [ -z "$INSTANCE_IDS" ]; then
+                            echo "No InService instances found in ASG"
+                            exit 1
+                        fi
+                
+                        EC2_IPS=$(aws ec2 describe-instances \
+                            --instance-ids $INSTANCE_IDS \
+                            --filters "Name=instance-state-name,Values=running" \
+                            --query "Reservations[].Instances[].PublicIpAddress" \
+                            --output text)
+                
+                        if [ -z "$EC2_IPS" ]; then
+                            echo "No running instances with public IPs found"
+                            exit 1
+                        fi
+                
+                        {
+                            echo "[aws_vm]"
+                
+                            i=1
+                            for IP in $EC2_IPS; do
+                                echo "server${i} ansible_host=${IP}"
+                                i=$((i + 1))
+                            done
+                        } > ansible/myinventory.ini
+                
                         ansible-inventory \
                             -i ansible/myinventory.ini \
                             --graph
                     '''
                 }
+
             }
         }
 
