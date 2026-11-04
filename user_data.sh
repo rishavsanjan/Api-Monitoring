@@ -274,5 +274,5 @@ fi
 echo "=========================================="
 echo "API Monitoring setup completed!"
 echo "Frontend is responding on port 3000."
-echo "Backend is available internally on port 8080."
+echo "Backend is available internally on port 5000."
 echo "=========================================="

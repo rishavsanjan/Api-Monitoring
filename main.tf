@@ -78,6 +78,25 @@ resource "aws_vpc_security_group_egress_rule" "api-ec2-egress" {
   ip_protocol = "-1"
 }
 
+resource "aws_vpc_security_group_egress_rule" "api-alb-backend-egress" {
+  security_group_id            = aws_security_group.api-sg-alb.id
+  referenced_security_group_id = aws_security_group.api-sg-ec2.id
+
+  from_port   = 5000
+  to_port     = 5000
+  ip_protocol = "tcp"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "api-ec2-backend-ingress" {
+  security_group_id            = aws_security_group.api-sg-ec2.id
+  referenced_security_group_id = aws_security_group.api-sg-alb.id
+
+  description = "Allow backend traffic from ALB"
+  from_port   = 5000
+  to_port     = 5000
+  ip_protocol = "tcp"
+}
+
 resource "aws_security_group" "api-sg-ec2" {
   name   = "api-mobitoring-security-group-ec2"
   vpc_id = aws_vpc.api-vpc.id
@@ -133,6 +152,14 @@ resource "aws_lb_target_group" "api-tg" {
   }
 }
 
+resource "aws_lb_target_group" "backend-tg" {
+  name     = "backend-tg"
+  port     = 5000
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.api-vpc.id
+
+}
+
 
 
 resource "aws_lb_listener" "api-lb-listener" {
@@ -143,6 +170,22 @@ resource "aws_lb_listener" "api-lb-listener" {
   default_action {
     target_group_arn = aws_lb_target_group.api-tg.arn
     type             = "forward"
+  }
+}
+
+resource "aws_lb_listener_rule" "backend-routing" {
+  listener_arn = aws_lb_listener.api-lb-listener.arn
+  priority     = 1
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend-tg.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/*"]
+    }
   }
 }
 

@@ -11,7 +11,8 @@ resource "aws_autoscaling_group" "api_asg" {
   ]
 
   target_group_arns = [
-    aws_lb_target_group.api-tg.arn
+    aws_lb_target_group.api-tg.arn,
+    aws_lb_target_group.backend-tg.arn
   ]
 
   health_check_type         = "ELB"
