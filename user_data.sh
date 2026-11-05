@@ -204,8 +204,8 @@ services:
     container_name: api-monitoring-backend
     restart: unless-stopped
 
-    expose:
-      - "5000"
+    ports:
+        - "5000:5000"
 
     env_file:
       - .app.env
