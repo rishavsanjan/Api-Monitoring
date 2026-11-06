@@ -33,14 +33,14 @@ func SetupRouter() *gin.Engine {
 
 	monitorRepo := monitor.NewRepository()
 	secretRepo := monitor.NewSecretRepository()
-	monitorService := monitor.NewService(monitorRepo, secretRepo, os.Getenv("ENCRYPTION_KEY"),)
+	monitorService := monitor.NewService(monitorRepo, secretRepo, os.Getenv("ENCRYPTION_KEY"))
 	monitorHandler := monitor.NewHandler(monitorService)
 
 	analyticsRepo := analytics.NewRepository()
 	analyticsService := analytics.NewService(analyticsRepo)
 	analyticsHandler := analytics.NewHandler(analyticsService)
 
-	userRepo := user.NewRepository();
+	userRepo := user.NewRepository()
 	userService := user.NewService(userRepo)
 	userHandler := user.NewHandler(userService)
 
@@ -73,11 +73,11 @@ func SetupRouter() *gin.Engine {
 	protected.GET("/monitors/:id/incident", analyticsHandler.GetMonitorIncidentResult)
 
 	r.GET("/ws", ws.HandleWS)
-	return r
-}
 
-func healthCheck(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"status": "ok",
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status": "healthy",
+		})
 	})
+	return r
 }

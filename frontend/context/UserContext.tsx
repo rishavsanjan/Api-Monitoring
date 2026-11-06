@@ -1,4 +1,5 @@
 "use client"
+import api from "@/lib/axios";
 import { User } from "@/type/props";
 import axios from "axios";
 import { createContext, SetStateAction, useContext, useEffect, useState } from "react";
@@ -43,7 +44,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
                     return
                 }
 
-                const res = await axios.get("http://localhost:5000/api/me", {
+                const res = await api.get("/api/me", {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     },

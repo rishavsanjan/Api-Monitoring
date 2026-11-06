@@ -158,6 +158,17 @@ resource "aws_lb_target_group" "backend-tg" {
   protocol = "HTTP"
   vpc_id   = aws_vpc.api-vpc.id
 
+  health_check {
+    enabled             = true
+    protocol            = "HTTP"
+    path                = "/"
+    port                = "traffic-port"
+    matcher             = "200-499"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+  }
 }
 
 

@@ -85,15 +85,14 @@ const SignupPage = ({ onSwitch }: { onSwitch: () => void }) => {
     const signupMutation = useMutation({
         mutationKey: ['register'],
         mutationFn: async () => {
-            const res = await axios({
-                url: `http://localhost:5000/api/register`,
-                method: 'post',
-                data: {
-                    email: form.email,
-                    password: form.password,
-                    name: form.name
-                }
+
+            const res = await api.post("/api/register", {
+                email: form.email,
+                password: form.password,
+                name: form.name
             })
+
+
 
             return res.data
         },

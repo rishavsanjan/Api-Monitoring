@@ -6,6 +6,7 @@ import axios, { AxiosError } from "axios";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
+import api from "@/lib/axios";
 
 interface LoginForm {
     email: string;
@@ -62,14 +63,11 @@ const LoginPage = ({ onSwitch }: { onSwitch: () => void }) => {
         mutationKey: ['login'],
         mutationFn: async () => {
 
-            const res = await axios({
-                url: `http://localhost:5000/api/login`,
-                method: 'post',
-                data: {
-                    email: form.email,
-                    password: form.password
-                }
+            const res = await api.post("/api/login", {
+                email: form.email,
+                password: form.password
             })
+
             return res.data
         },
         onSuccess: async (data) => {
