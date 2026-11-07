@@ -138,6 +138,8 @@ resource "aws_lb" "api-load-balancer" {
   load_balancer_type = "application"
   security_groups    = [aws_security_group.api-sg-alb.id]
   subnets            = [aws_subnet.subnet-1.id, aws_subnet.subnet-2.id]
+
+  idle_timeout = 300
 }
 
 resource "aws_lb_target_group" "api-tg" {
@@ -161,9 +163,9 @@ resource "aws_lb_target_group" "backend-tg" {
   health_check {
     enabled             = true
     protocol            = "HTTP"
-    path                = "/"
+    path                = "/health"
     port                = "traffic-port"
-    matcher             = "200-499"
+    matcher             = "200"
     interval            = 30
     timeout             = 5
     healthy_threshold   = 2
@@ -196,6 +198,38 @@ resource "aws_lb_listener_rule" "backend-routing" {
   condition {
     path_pattern {
       values = ["/api/*"]
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "websocket-routing" {
+  listener_arn = aws_lb_listener.api-lb-listener.arn
+  priority     = 2
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend-tg.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/ws", "/ws/*"]
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "backend-health-routing" {
+  listener_arn = aws_lb_listener.api-lb-listener.arn
+  priority     = 3
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend-tg.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/health"]
     }
   }
 }

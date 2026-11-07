@@ -80,55 +80,73 @@ export default function MonitorDetailPage() {
     useEffect(() => {
         const token = localStorage.getItem("api");
 
+        if (!token) return;
+
+        const protocol =
+            window.location.protocol === "https:" ? "wss:" : "ws:";
+
         const socket = new WebSocket(
-            `ws://localhost:5000/ws?token=${token}`
+            `${protocol}//${window.location.host}/ws?token=${encodeURIComponent(token)}`
         );
+
+        socket.onopen = () => {
+            console.log("WebSocket connected");
+        };
 
         socket.onmessage = async (event) => {
             const data: LiveData = JSON.parse(event.data);
-            console.log("Live update:", data);
+
             const newPoint = {
                 time: getTimeFromISO(data.history.CheckedAt),
                 value: data.history.ResponseTimeMs
             };
 
-            await queryClient.cancelQueries({ queryKey: ["monitor-result", id] });
-
-
+            await queryClient.cancelQueries({
+                queryKey: ["monitor-result", id]
+            });
 
             queryClient.setQueryData<MonitorPageResponse>(
                 ["monitor-result", id],
                 (old) => {
                     if (!old) return old;
-                    if (old.monitor.ID != data.history.MonitorID) {
+
+                    if (old.monitor.ID !== data.history.MonitorID) {
                         return old;
                     }
-                    toast.success(`Response recieved : ${data.history.ResponseTimeMs}ms`)
+
+                    toast.success(
+                        `Response received: ${data.history.ResponseTimeMs}ms`
+                    );
 
                     return {
                         ...old,
                         history: [data.history, ...old.history],
                         stats: {
                             ...old.stats,
-                            totalLogs: old.stats.totalLogs += 1
+                            totalLogs: old.stats.totalLogs + 1
                         },
-
                         chartData: [...old.chartData, newPoint],
-                        log: data.log,
-
+                        log: data.log
                     };
                 }
             );
-            setCheckingNow(false)
 
+            setCheckingNow(false);
+        };
 
+        socket.onerror = (error) => {
+            console.error("WebSocket error:", error);
+        };
 
+        socket.onclose = () => {
+            console.log("WebSocket disconnected");
         };
 
         return () => {
             socket.close();
         };
-    }, []);
+
+    }, [id, queryClient]);
 
     const handleRunCheckNowMutation = useMutation({
         mutationKey: ['runchecknow', id],
