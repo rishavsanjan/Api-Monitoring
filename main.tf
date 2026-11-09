@@ -275,7 +275,7 @@ variable "aws_region" {
 resource "aws_launch_template" "api_launch_template" {
   name_prefix   = "api-monitoring-"
   image_id      = "ami-0b6d9d3d33ba97d99"
-  instance_type = "t2.micro"
+  instance_type = "t3a.medium"
   key_name      = "vm-key"
 
   iam_instance_profile {

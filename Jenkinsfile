@@ -9,19 +9,34 @@ pipeline {
 
     environment {
         AWS_DEFAULT_REGION = 'us-east-1'
+        AWS_ACCOUNT_ID = '945945134870'
+
+        FRONTEND_LOCAL_IMAGE = 'api-monitoring-frontend'
+        BACKEND_LOCAL_IMAGE = 'api-monitoring-backend'
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 git branch: 'main',
                     url: 'https://github.com/rishavsanjan/api-monitoring'
+
+                script {
+                    env.IMAGE_TAG = sh(
+                        script: 'git rev-parse --short=12 HEAD',
+                        returnStdout: true
+                    ).trim()
+
+                    echo "Building images with tag: ${env.IMAGE_TAG}"
+                }
             }
         }
 
-        stage('Build services') {
+        stage('Build and Test Services') {
             parallel {
-                stage('Build frontend') {
+
+                stage('Frontend') {
                     steps {
                         dir('frontend') {
                             sh 'npm install'
@@ -29,7 +44,7 @@ pipeline {
                     }
                 }
 
-                stage('Build backend') {
+                stage('Backend') {
                     steps {
                         dir('backend') {
                             sh 'go mod download'
@@ -40,8 +55,7 @@ pipeline {
             }
         }
 
-        
-        stage('Docker image build') {
+        stage('Docker Image Build') {
             steps {
                 withCredentials([
                     string(credentialsId: 'DATABASE_URL', variable: 'DATABASE_URL'),
@@ -55,14 +69,14 @@ pipeline {
                         set -eu
         
                         docker compose config --quiet
-                        docker compose build
+        
+                        docker compose build web backend
                     '''
                 }
             }
         }
 
-
-        stage('AWS login and push to ECR') {
+        stage('Push Images to ECR') {
             steps {
                 withCredentials([
                     usernamePassword(
@@ -76,27 +90,37 @@ pipeline {
 
                         aws sts get-caller-identity
 
-                        terraform init -input=false
+                        FRONTEND_REPO_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/api-monitoring-ecr-repositry-frontend"
 
-                        FRONTEND_REPO_URI=$(terraform output -raw ecr_frontend_repo_uri)
-                        BACKEND_REPO_URI=$(terraform output -raw ecr_backend_repo_uri)
-                        
-                        test -n "$FRONTEND_REPO_URI"
-                        test -n "$BACKEND_REPO_URI"
+                        BACKEND_REPO_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/api-monitoring-ecr-repositry-backend"
+
+                        ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
 
                         aws ecr get-login-password \
-                          --region "$AWS_DEFAULT_REGION" |
-                          docker login \
-                            --username AWS \
-                            --password-stdin \
-                            "$(echo "$FRONTEND_REPO_URI" | cut -d/ -f1)"
+                            --region "$AWS_DEFAULT_REGION" |
+                            docker login \
+                                --username AWS \
+                                --password-stdin "$ECR_REGISTRY"
 
-                        docker tag api-monitoring-frontend:latest \
-                          "$FRONTEND_REPO_URI:latest"
+                        # Frontend
+                        docker tag "$FRONTEND_LOCAL_IMAGE:latest" \
+                            "$FRONTEND_REPO_URI:$IMAGE_TAG"
 
-                        docker tag api-monitoring-backend:latest \
-                          "$BACKEND_REPO_URI:latest"
+                        docker tag "$FRONTEND_LOCAL_IMAGE:latest" \
+                            "$FRONTEND_REPO_URI:latest"
 
+                        # Backend
+                        docker tag "$BACKEND_LOCAL_IMAGE:latest" \
+                            "$BACKEND_REPO_URI:$IMAGE_TAG"
+
+                        docker tag "$BACKEND_LOCAL_IMAGE:latest" \
+                            "$BACKEND_REPO_URI:latest"
+
+                        # Push versioned images
+                        docker push "$FRONTEND_REPO_URI:$IMAGE_TAG"
+                        docker push "$BACKEND_REPO_URI:$IMAGE_TAG"
+
+                        # Push latest tags
                         docker push "$FRONTEND_REPO_URI:latest"
                         docker push "$BACKEND_REPO_URI:latest"
                     '''
@@ -104,7 +128,45 @@ pipeline {
             }
         }
 
-        stage('Generate Ansible inventory') {
+
+        stage('Update Launch Template') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'aws-jenkins',
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    ),
+                    string(
+                        credentialsId: 'APP_SECRET_ARN',
+                        variable: 'APP_SECRET_ARN'
+                    )
+                ]) {
+                    sh '''
+                        set -eu
+        
+                        terraform init -input=false
+        
+                        terraform validate
+        
+                        terraform plan \
+                            -input=false \
+                            -var="image_tag=$IMAGE_TAG" \
+                            -var="aws_region=$AWS_DEFAULT_REGION" \
+                            -var="app_secret_arn=$APP_SECRET_ARN" \
+                            -out=tfplan
+        
+                        terraform apply \
+                            -input=false \
+                            -auto-approve \
+                            tfplan
+                    '''
+                }
+            }
+        }
+
+
+        stage('ASG Instance Refresh') {
             steps {
                 withCredentials([
                     usernamePassword(
@@ -112,82 +174,58 @@ pipeline {
                         usernameVariable: 'AWS_ACCESS_KEY_ID',
                         passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                     )
-                ]) 
-                {
-                    sh '''
-                        set -eu
-                
-                        export AWS_DEFAULT_REGION=us-east-1
-                
-                        aws sts get-caller-identity
-                
-                        terraform init -input=false
-                
-                        ASG_NAME=$(terraform output -raw autoscaling_group_name)
-                
-                        INSTANCE_IDS=$(aws autoscaling describe-auto-scaling-groups \
-                            --auto-scaling-group-names "$ASG_NAME" \
-                            --query "AutoScalingGroups[0].Instances[?LifecycleState=='InService'].InstanceId" \
-                            --output text)
-                
-                        if [ -z "$INSTANCE_IDS" ]; then
-                            echo "No InService instances found in ASG"
-                            exit 1
-                        fi
-                
-                        EC2_IPS=$(aws ec2 describe-instances \
-                            --instance-ids $INSTANCE_IDS \
-                            --filters "Name=instance-state-name,Values=running" \
-                            --query "Reservations[].Instances[].PublicIpAddress" \
-                            --output text)
-                
-                        if [ -z "$EC2_IPS" ]; then
-                            echo "No running instances with public IPs found"
-                            exit 1
-                        fi
-                
-                        {
-                            echo "[aws_vm]"
-                
-                            i=1
-                            for IP in $EC2_IPS; do
-                                echo "server${i} ansible_host=${IP}"
-                                i=$((i + 1))
-                            done
-                        } > ansible/myinventory.ini
-                
-                        ansible-inventory \
-                            -i ansible/myinventory.ini \
-                            --graph
-                    '''
-                }
-
-            }
-        }
-
-        stage('Deploy with Ansible') {
-            steps {
-                withCredentials([
-                    file(credentialsId: 'vm-key', variable: 'SSH_KEY')
                 ]) {
                     sh '''
                         set -eu
-                        chmod 400 "$SSH_KEY"
 
-                        ANSIBLE_HOST_KEY_CHECKING=False \
-                        ansible \
-                          -i ansible/myinventory.ini \
-                          all \
-                          -u ubuntu \
-                          --private-key "$SSH_KEY" \
-                          -m ping
+                        ASG_NAME=$(terraform output -raw autoscaling_group_name)
 
-                        ANSIBLE_HOST_KEY_CHECKING=False \
-                        ansible-playbook \
-                          -i ansible/myinventory.ini \
-                          -u ubuntu \
-                          --private-key "$SSH_KEY" \
-                          ansible/playbook.yaml
+                        echo "Auto Scaling Group: $ASG_NAME"
+
+                        echo "Starting instance refresh..."
+
+                        REFRESH_ID=$(aws autoscaling start-instance-refresh \
+                            --auto-scaling-group-name "$ASG_NAME" \
+                            --preferences '{
+                                "MinHealthyPercentage": 90,
+                                "MaxHealthyPercentage": 110,
+                                "InstanceWarmup": 300,
+                                "SkipMatching": true
+                            }' \
+                            --query 'InstanceRefreshId' \
+                            --output text)
+
+                        echo "Instance refresh started: $REFRESH_ID"
+
+                        echo "Checking refresh status..."
+
+                        while true; do
+
+                            STATUS=$(aws autoscaling describe-instance-refreshes \
+                                --auto-scaling-group-name "$ASG_NAME" \
+                                --instance-refresh-ids "$REFRESH_ID" \
+                                --query 'InstanceRefreshes[0].Status' \
+                                --output text)
+
+                            echo "Refresh status: $STATUS"
+
+                            case "$STATUS" in
+                                Successful)
+                                    echo "ASG deployment completed successfully!"
+                                    break
+                                    ;;
+
+                                Failed|Cancelled|RollbackFailed|RollbackSuccessful)
+                                    echo "ASG deployment failed or was rolled back."
+                                    exit 1
+                                    ;;
+
+                                *)
+                                    sleep 20
+                                    ;;
+                            esac
+
+                        done
                     '''
                 }
             }
@@ -198,11 +236,13 @@ pipeline {
         always {
             echo 'Pipeline execution completed.'
         }
+
         success {
-            echo 'All stages passed successfully!'
+            echo 'Application successfully deployed through Auto Scaling Group!'
         }
+
         failure {
-            echo 'Pipeline failed. Check stage logs.'
+            echo 'Pipeline failed. Check Jenkins console logs.'
         }
     }
 }

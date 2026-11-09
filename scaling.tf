@@ -9,6 +9,6 @@ resource "aws_autoscaling_policy" "cpu_scaling" {
       predefined_metric_type = "ASGAverageCPUUtilization"
     }
 
-    target_value = 60.0
+    target_value = 85.0
   }
 }

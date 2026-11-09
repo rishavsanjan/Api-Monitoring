@@ -55,7 +55,8 @@ apt-get install -y \
     awscli \
     jq \
     curl \
-    ca-certificates
+    ca-certificates \
+    python3
 
  
 # 3. Start Docker
