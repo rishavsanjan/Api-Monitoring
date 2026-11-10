@@ -77,7 +77,7 @@ const Home = () => (
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
           <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-400" />
         </span>
-        Now with Global Edge Monitoring
+        Keep a eye on Your Endpoints
       </div>
 
       {/* Headline */}
@@ -97,9 +97,9 @@ const Home = () => (
           Get Started for Free
           <span className="group-hover:translate-x-1 transition-transform"><IconArrow /></span>
         </button>
-        <button className="bg-slate-800 hover:bg-slate-700 text-white text-lg font-bold px-8 py-4 rounded-xl border border-slate-700 transition-all">
+        {/* <button className="bg-slate-800 hover:bg-slate-700 text-white text-lg font-bold px-8 py-4 rounded-xl border border-slate-700 transition-all">
           Schedule Demo
-        </button>
+        </button> */}
       </div>
 
       {/* Dashboard mockup */}

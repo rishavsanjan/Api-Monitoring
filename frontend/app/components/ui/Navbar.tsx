@@ -27,7 +27,7 @@ const IconX = () => (
 const Navbar = () => {
   const { user } = useUser();
   const [open, setOpen] = useState(false);
-  const links = ["Features", "Pricing", "Docs", "Blog"];
+  const links = ["Features"];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-800/80 bg-[#101722]/80 backdrop-blur-md px-6 lg:px-20 py-4">
