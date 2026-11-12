@@ -1,6 +1,7 @@
 import { timeAgo } from "@/lib/date";
+import { Activity, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { SetStateAction } from "react";
+import { SetStateAction, useState } from "react";
 import { ClipLoader } from "react-spinners";
 type MonitorStatus = "online" | "offline" | "degraded";
 
@@ -49,6 +50,7 @@ export const MonitorsTable = (
             isLoading: boolean
         }
 ) => {
+    const [isNavigating, setIsNavigating] = useState<string>("")
     const router = useRouter();
     const totalPages = Math.ceil(totalMonitors / 5);
     const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -94,7 +96,8 @@ export const MonitorsTable = (
                                             {monitors.map((m) => (
                                                 <tr
                                                     onClick={() => {
-                                                        router.push(`/monitor/${m.monitorId}`)
+                                                        setIsNavigating(m.monitorId);
+                                                        router.push(`/monitor/${m.monitorId}`);
                                                     }}
                                                     key={m.monitorId}
                                                     className="cursor-pointer hover:bg-slate-800/30 transition-colors group"
@@ -103,30 +106,44 @@ export const MonitorsTable = (
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <div className="flex items-center gap-3">
                                                             <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center flex-shrink-0">
-
+                                                                {isNavigating === m.monitorId ? (
+                                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                                ) : (
+                                                                    <Activity className="h-4 w-4" />
+                                                                )}
                                                             </div>
-                                                            <span className="text-sm font-semibold text-white">{m.name}</span>
+
+                                                            <span className="text-sm font-semibold text-white">
+                                                                {m.name}
+                                                            </span>
                                                         </div>
                                                     </td>
+
                                                     {/* URL */}
                                                     <td className="px-6 py-4 whitespace-nowrap">
-                                                        <span className="text-sm text-slate-500 font-mono">{m.url}</span>
+                                                        <span className="text-sm text-slate-500 font-mono">
+                                                            {m.url}
+                                                        </span>
                                                     </td>
+
                                                     {/* Status */}
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <StatusBadge status={m.status === "UP" ? "online" : "offline"} />
                                                     </td>
+
                                                     {/* Response time */}
                                                     <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                        <span className={`text-sm font-semibold ${m.status === "offline" ? "text-red-400" : "text-slate-300"}`}>
+                                                        <span className="text-sm font-semibold text-slate-300">
                                                             {m.responseTimeMs}
                                                         </span>
                                                     </td>
+
                                                     {/* Last checked */}
                                                     <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                        <span className="text-sm text-slate-500">{timeAgo(m.lastCheckedAt)}</span>
+                                                        <span className="text-sm text-slate-500">
+                                                            {timeAgo(m.lastCheckedAt)}
+                                                        </span>
                                                     </td>
-
                                                 </tr>
                                             ))}
                                         </>

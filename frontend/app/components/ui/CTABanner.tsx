@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const IconArrow = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
     <line x1="5" y1="12" x2="19" y2="12" />
@@ -19,13 +21,14 @@ const CTABanner = () => (
         Join 5,000+ engineering teams who trust UptimePulse for their mission-critical services.
       </p>
       <div className="flex flex-col sm:flex-row gap-4 justify-center relative z-10">
-        <button className="bg-white text-blue-600 hover:bg-slate-100 text-lg font-bold px-8 py-4 rounded-xl transition-all flex items-center justify-center gap-2 group">
-          Get Started for Free
-          <span className="group-hover:translate-x-1 transition-transform"><IconArrow /></span>
-        </button>
-        <button className="bg-blue-400/20 text-white border border-white/30 hover:bg-white/10 text-lg font-bold px-8 py-4 rounded-xl transition-all">
-          Talk to an Expert
-        </button>
+        <Link href={`/auth?tab=signup`} className="text-slate-400 text-sm font-semibold hover:text-white transition-colors px-3 py-2">
+          <button className="bg-white text-blue-600 hover:bg-slate-100 text-lg font-bold px-8 py-4 rounded-xl transition-all flex items-center justify-center gap-2 group">
+            Get Started for Free
+            <span className="group-hover:translate-x-1 transition-transform"><IconArrow /></span>
+          </button>
+        </Link>
+
+
       </div>
     </div>
   </section>

@@ -33,18 +33,13 @@ const features: FeatureCard[] = [
   {
     icon: <IconBell />,
     title: "Real-time Alerts",
-    body: "Get notified via Slack, PagerDuty, or Email the second your API goes down. Instant escalation for critical issues.",
+    body: "Get notified via Email the second your API goes down. Instant escalation for critical issues.",
   },
   {
     icon: <IconChart />,
     title: "Performance Analytics",
     body: "Deep dive into latency, throughput, and error rates with interactive charts. Identify bottlenecks before they hit users.",
-  },
-  {
-    icon: <IconGlobe />,
-    title: "Global Monitoring",
-    body: "Check health from 20+ global locations. Ensure a consistent experience for your users regardless of where they are.",
-  },
+  }
 ];
 
 const Features = () => (

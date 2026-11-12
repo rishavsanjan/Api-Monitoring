@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const IconArrow = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
     <line x1="5" y1="12" x2="19" y2="12" />
@@ -68,7 +70,7 @@ const Home = () => (
   </div>
 );
 
- const Hero = () => (
+const Hero = () => (
   <section className="relative pt-20 pb-16 lg:pt-32 lg:pb-24 px-6">
     <div className="max-w-7xl mx-auto flex flex-col items-center text-center gap-8">
       {/* Badge */}
@@ -88,15 +90,19 @@ const Home = () => (
 
       {/* Sub */}
       <p className="max-w-2xl text-slate-400 text-lg lg:text-xl leading-relaxed">
-        Keep your APIs running smoothly with real-time insights, automated testing, and global monitoring. Built for modern engineering teams who demand 100% uptime.
+        Keep your APIs running smoothly with real-time insights, automated testing. Built for modern engineering teams who demand 100% uptime.
       </p>
 
       {/* CTAs */}
       <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
-        <button className="bg-blue-500 hover:bg-blue-400 text-white text-lg font-bold px-8 py-4 rounded-xl transition-all shadow-xl shadow-blue-500/25 flex items-center justify-center gap-2 group">
-          Get Started for Free
-          <span className="group-hover:translate-x-1 transition-transform"><IconArrow /></span>
-        </button>
+        <Link href={`/auth?tab=signup`} className="text-slate-400 text-sm font-semibold hover:text-white transition-colors px-3 py-2">
+          <button className="bg-blue-500 hover:bg-blue-400 text-white text-lg font-bold px-8 py-4 rounded-xl transition-all shadow-xl shadow-blue-500/25 flex items-center justify-center gap-2 group">
+            Get Started for Free
+            <span className="group-hover:translate-x-1 transition-transform"><IconArrow /></span>
+          </button>
+        </Link>
+
+
         {/* <button className="bg-slate-800 hover:bg-slate-700 text-white text-lg font-bold px-8 py-4 rounded-xl border border-slate-700 transition-all">
           Schedule Demo
         </button> */}

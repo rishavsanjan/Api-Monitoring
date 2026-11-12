@@ -25,10 +25,10 @@ export default function LandingPage() {
       <main>
         <Hero />
         <Features />
-        <Pricing />
+        {/* <Pricing /> */}
         <CTABanner />
       </main>
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }
