@@ -15,6 +15,7 @@ const SidebarContext = createContext<SidebarContextType | null>(null);
 export const SidebarProvider = ({ children }: { children: React.ReactNode }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [activeBar, setActiveBar] = useState('Monitors');
+  console.log(activeBar)
   const [loadingNav, setLoadingNav] = useState<string>("Dashboard");
   return (
     <SidebarContext.Provider value={{ collapsed, setCollapsed , activeBar, setActiveBar}}>

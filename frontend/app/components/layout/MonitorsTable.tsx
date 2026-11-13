@@ -55,6 +55,14 @@ export const MonitorsTable = (
     const totalPages = Math.ceil(totalMonitors / 5);
     const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
 
+    if (isLoading === true) {
+        return (
+            <div className="flex justify-center items-center w-full">
+                <ClipLoader color="white" />
+            </div>
+        )
+    }
+
 
     return (
         <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
@@ -163,8 +171,8 @@ export const MonitorsTable = (
                         {/* Pagination */}
                         <div className="px-6 py-4 flex items-center justify-between border-t border-slate-800 bg-slate-800/30">
                             <p className="text-sm text-slate-500">
-                                Showing <span className="font-semibold text-white">{currentPage === 1 ? 1 : currentPage - 1 * 5}</span> to{" "}
-                                <span className="font-semibold text-white">{currentPage * 5}</span> of{" "}
+                                Showing <span className="font-semibold text-white">{currentPage === 1 ? 1 :  currentPage - 1 * 5}</span> to{" "}
+                                <span className="font-semibold text-white">{(currentPage * 5)}</span> of{" "}
                                 <span className="font-semibold text-white">{totalMonitors}</span> results
                             </p>
                             <div className="flex gap-1.5">

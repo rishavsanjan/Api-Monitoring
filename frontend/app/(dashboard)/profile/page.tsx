@@ -3,13 +3,13 @@ import NotificationsTab from "@/app/components/layout/NotificationsTab";
 import ProfileTab from "@/app/components/layout/ProfileTab";
 import SecurityTab from "@/app/components/layout/SecurityTab";
 
-import { JSX, useState } from "react";
+import { JSX, useEffect, useState } from "react";
 
 type Tab = "profile" | "notifications" | "security";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("profile");
-  
+
 
 
   const tabs: { id: Tab; label: string; icon: JSX.Element }[] = [

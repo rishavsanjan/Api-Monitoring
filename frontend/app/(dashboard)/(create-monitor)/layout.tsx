@@ -21,13 +21,13 @@ const CreateMonitorLayout: React.FC<Props> = ({ children }) => {
                         <span className="text-slate-700"><IconChevronRight /></span>
                         <span className="text-slate-300 font-medium">Create New Monitor</span>
                     </nav>
-                    <div className="flex items-center gap-2">
+                    {/* <div className="flex items-center gap-2">
                         {[<IconBell key="b" />, <IconHelp key="h" />].map((icon, i) => (
                             <button key={i} className="w-9 h-9 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 flex items-center justify-center transition-colors">
                                 {icon}
                             </button>
                         ))}
-                    </div>
+                    </div> */}
                 </header>
 
                 {/* Form Area */}

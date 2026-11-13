@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import { ClipLoader } from 'react-spinners';
 
 const ProfileTab = () => {
-
+    const [save, setSave] = useState<boolean>(false)
     const { user, isFetchingUser, setUser, logOut } = useUser();
     const router = useRouter();
 
@@ -50,6 +50,7 @@ const ProfileTab = () => {
                     ? { ...prev, name: profile.name }
                     : null
             );
+            setSave(true)
 
         },
         onError: () => {
@@ -86,11 +87,11 @@ const ProfileTab = () => {
                             <div className="w-24 h-24 rounded-full border-4 border-slate-100 dark:border-slate-800 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-3xl font-bold">
                                 {profile.name[0].toUpperCase()}
                             </div>
-                            <button className="absolute bottom-0 right-0 bg-blue-500 text-white p-1.5 rounded-full border-2 border-white dark:border-slate-900 shadow-lg hover:bg-blue-600 transition-colors">
+                            {/* <button className="absolute bottom-0 right-0 bg-blue-500 text-white p-1.5 rounded-full border-2 border-white dark:border-slate-900 shadow-lg hover:bg-blue-600 transition-colors">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
                                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" />
                                 </svg>
-                            </button>
+                            </button> */}
                         </div>
                         <div>
                             <div className="flex flex-row items-center space-x-2 ">
@@ -132,7 +133,10 @@ const ProfileTab = () => {
                             <input
                                 type="text"
                                 value={profile.name}
-                                onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                                onChange={(e) => { 
+                                    setProfile({ ...profile, name: e.target.value })
+                                    setSave(false)
+                                }}
                                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                             />
                         </div>
@@ -164,7 +168,7 @@ const ProfileTab = () => {
                         disabled={(user?.name === profile.name && user.email === profile.email) || profile?.name.trim().length === 0 || profile?.email.trim().length === 0}
                         className="px-6 py-2 bg-blue-500 text-white text-sm font-bold rounded-lg shadow-lg shadow-blue-500/20 hover:bg-blue-600 transition-all active:scale-[0.98] flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-75"
                     >
-                        {handleSaveMutation.isSuccess ? (
+                        {save ? (
                             <>
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                                     <polyline points="20 6 9 17 4 12" />
